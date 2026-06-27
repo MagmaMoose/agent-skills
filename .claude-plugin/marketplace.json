@@ -1,0 +1,16 @@
+{
+  "name": "magmamoose",
+  "description": "MagmaMoose shared Claude Code skills.",
+  "owner": {
+    "name": "Caleb Sargeant",
+    "email": "caleb@magmamoose.com"
+  },
+  "plugins": [
+    {
+      "name": "claude-skills",
+      "source": "./",
+      "description": "Shared PR review + triage skills for local Claude apps and in-cluster agents.",
+      "version": "0.1.0"
+    }
+  ]
+}
