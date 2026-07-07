@@ -1,6 +1,6 @@
 {
   "name": "magmamoose",
-  "description": "MagmaMoose shared Claude Code skills.",
+  "description": "MagmaMoose shared agent workflows.",
   "owner": {
     "name": "Caleb Sargeant",
     "email": "caleb@magmamoose.com"
@@ -9,7 +9,7 @@
     {
       "name": "claude-skills",
       "source": "./",
-      "description": "Shared PR review + triage skills for local Claude apps and in-cluster agents.",
+      "description": "Shared PR review and PR triage workflows for Claude Code. The claude-skills name is kept to preserve slash commands.",
       "version": "0.1.0"
     }
   ]
