@@ -1,46 +1,89 @@
-# claude-skills
+# agent-skills
 
-Shared [Claude Code](https://code.claude.com) skills for the MagmaMoose stack — one
-source of truth for the slash commands used both **locally** (Caleb's Claude Code apps)
-and **in-cluster** (the headless agents like Nievah that run `claude -p` against the
-self-hosted LiteLLM gateway).
+Shared agent workflows for the MagmaMoose stack, packaged for Claude Code and Codex.
 
-The point of this repo: these rubrics used to be hand-copied into each consumer (local
-`~/.claude/commands/`, the Nievah image, comment-commander). That drifts. Now there is
-**one definition** here, and every consumer installs it.
+This repository keeps one source of truth for PR review and PR triage. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
 
-## Skills
+Do not fork these workflows per project. Put project-specific rules in the target repository's `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, or relevant `README.md` files. The adapters instruct agents to read those files before acting and to treat explicit hard rules as blockers.
 
-| Command | What it does |
-| --- | --- |
-| `/claude-skills:pr-review` | Review a PR end to end (correctness, security, repo conventions, tests) and post one consolidated GitHub review with inline comments + a verdict. |
-| `/claude-skills:pr-triage` | Read every PR comment (GHAS, Copilot, code-quality, human), fix the code, reply, and resolve each thread. |
+## Workflows
 
-Both adapt to the target repo automatically — they read that repo's own `CLAUDE.md` /
-`AGENTS.md` / `CONTRIBUTING` and treat its stated hard rules as blockers. So you do **not**
-fork these per-project: put house rules in the target repo, not in a copy of the skill.
+| Workflow | Claude Code command | Codex skill |
+| --- | --- | --- |
+| PR review | `/claude-skills:pr-review` | `pr-review` |
+| PR triage | `/claude-skills:pr-triage` | `pr-triage` |
 
-## Install (local Claude Code)
+The Claude command namespace remains `claude-skills` for backward compatibility with existing users and headless installs.
+
+## Compatibility
+
+| Agent | Uses | Install source |
+| --- | --- | --- |
+| Claude Code | `.claude-plugin` + `commands/` | `claude plugin marketplace add magmamoose/agent-skills` |
+| Codex | `.codex-plugin` + `skills/` | `codex plugin marketplace add magmamoose/agent-skills` |
+| Shared logic | `shared/*.md` | same repo |
+
+If you installed this repository before it was renamed from `claude-skills`, update your marketplace reference to `magmamoose/agent-skills`.
+
+## Install
+
+### Claude local install
 
 ```bash
-claude plugin marketplace add magmamoose/claude-skills
+claude plugin marketplace add magmamoose/agent-skills
 claude plugin install claude-skills@magmamoose
 ```
 
-Then invoke with `/claude-skills:pr-review` (and `/claude-skills:pr-triage`).
+Invoke the Claude commands with:
 
-## Install (headless / in-cluster)
+```text
+/claude-skills:pr-review 123
+/claude-skills:pr-triage 123
+```
 
-The same two CLI calls work non-interactively at image-build time, after the `claude`
-CLI is installed:
+### Claude headless / in-cluster install
+
+The same two CLI calls work non-interactively at image-build time, after the `claude` CLI is installed:
 
 ```Dockerfile
 RUN npm install -g @anthropic-ai/claude-code \
- && claude plugin marketplace add magmamoose/claude-skills \
+ && claude plugin marketplace add magmamoose/agent-skills \
  && claude plugin install claude-skills@magmamoose
 ```
 
-Then the worker runs e.g. `claude -p "/claude-skills:pr-review 123"`.
+Then the worker can run, for example:
+
+```bash
+claude -p "/claude-skills:pr-review 123"
+```
+
+### Codex marketplace install
+
+```bash
+codex plugin marketplace add magmamoose/agent-skills
+codex plugin add agent-skills@magmamoose
+```
+
+Codex invocation examples:
+
+```text
+Use the pr-review skill on PR 123.
+Use the pr-triage skill on PR 123.
+```
+
+## Repository layout
+
+```text
+.
+├── .claude-plugin/
+├── .codex-plugin/
+├── commands/
+├── skills/
+├── shared/
+├── README.md
+├── LICENSE
+└── .gitignore
+```
 
 ## License
 

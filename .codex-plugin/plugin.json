@@ -1,0 +1,28 @@
+{
+  "name": "agent-skills",
+  "version": "1.0.0",
+  "description": "Shared PR review and PR triage workflows for MagmaMoose agents.",
+  "author": {
+    "name": "Caleb Sargeant",
+    "email": "caleb@magmamoose.com",
+    "url": "https://github.com/CalebSargeant"
+  },
+  "homepage": "https://github.com/magmamoose/agent-skills",
+  "repository": "https://github.com/magmamoose/agent-skills",
+  "license": "MIT",
+  "keywords": ["pr-review", "pr-triage", "code-review", "automation"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "MagmaMoose Agent Skills",
+    "shortDescription": "Shared PR review and triage workflows.",
+    "longDescription": "Shared PR review and PR triage workflows for MagmaMoose agents, packaged as reusable Codex skills.",
+    "developerName": "MagmaMoose",
+    "category": "Productivity",
+    "capabilities": ["Review", "Write"],
+    "websiteURL": "https://github.com/magmamoose/agent-skills",
+    "defaultPrompt": [
+      "Use the pr-review skill on PR 123.",
+      "Use the pr-triage skill on PR 123."
+    ]
+  }
+}
