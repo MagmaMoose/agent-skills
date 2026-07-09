@@ -16,16 +16,24 @@ The only thing that ends the run is posting the review or a hard external blocke
 cannot work around (e.g. the PR doesn't exist, or the API refuses the review) — and even
 then you report it, you don't ask.
 
-**Post exactly ONE review per run.** Gather everything, form every finding, then submit a
-single review that carries all the inline comments and the summary together. Do **not**
-dribble out one comment per API call (that spams the author with notifications). Before
-posting, check whether you've already left a review on the current head commit — if an
-equivalent one exists, don't duplicate it; report that instead (see step 6).
+**Post exactly ONE review per run — and never a second one.** Gather everything, form every
+finding, then submit a single review that carries all the inline comments and the summary
+together. Do **not** dribble out one comment per API call (that spams the author with
+notifications). The submit in step 5 is a **one-shot**: once that `POST .../reviews` returns
+an `id`, you are **DONE** — do **not** call the reviews endpoint again for any reason (not to
+"double-check", not to re-post, not a follow-up). The only exception is the explicit `422`
+retry in step 5, which replaces a *rejected* POST (no review was created), never adds a
+second one. Before posting, check whether you've already left a review on the current head
+commit — if an equivalent one exists, don't duplicate it; report that instead (see step 6).
 
-**Verdict policy — never auto-approve.**
-- Any **blocking** finding present → submit as `REQUEST_CHANGES`.
-- No blocking findings → submit as `COMMENT`.
-- **Never `APPROVE`.** The approve-and-merge call stays with a human.
+**Verdict policy.** Pick exactly one `event`:
+- Not your own PR, **no** blocking (`⛔`) findings and **no** should-fix (`🟡`) findings →
+  **`APPROVE`**. Approve only when the change is genuinely clean.
+- Any **blocking** (`⛔`) finding → **`REQUEST_CHANGES`**.
+- Otherwise (should-fixes present but nothing blocking) → **`COMMENT`**.
+
+A lone should-fix means `COMMENT`, not `APPROVE`; when in doubt, `COMMENT`. (A downstream
+gate may key a required status check off this verdict, so it must reflect real mergeability.)
 
 **Your own PR is a special case.** GitHub does not let you approve *or* request changes on
 a PR you authored — only `COMMENT` is accepted. So when the PR author is you, always submit
@@ -223,9 +231,9 @@ Tag every finding with one of:
 
 **Verdict** (from the policy at the top):
 - own PR → **`COMMENT`** always (blockers go under `### ⛔ Blocking` in the body).
-- not own PR, ≥1 blocking finding → **`REQUEST_CHANGES`**.
-- not own PR, no blocking findings → **`COMMENT`**.
-- never **`APPROVE`**.
+- not own PR, ≥1 **⛔ blocking** finding → **`REQUEST_CHANGES`**.
+- not own PR, ≥1 **🟡 should-fix** but no blocking → **`COMMENT`**.
+- not own PR, no ⛔ and no 🟡 findings (clean) → **`APPROVE`**.
 
 ---
 
@@ -280,11 +288,11 @@ to create the payload file (avoids shell-quoting hell), then submit with `gh api
 Set `event` per step 3:
 - own PR → `"COMMENT"`.
 - not own PR + any ⛔ → `"REQUEST_CHANGES"`.
-- otherwise → `"COMMENT"`.
+- not own PR + only 🟡 should-fixes (no ⛔) → `"COMMENT"`.
+- not own PR + no ⛔ and no 🟡 → `"APPROVE"`.
 
-If there are **no findings at all**, still post a `COMMENT` review whose body says the PR
-looks clean to you and notes the one remaining human action (review depth caveats, then
-approve/merge) — do **not** `APPROVE`.
+If there are **no findings at all**, post an `"APPROVE"` review (or `"COMMENT"` if it's your
+own PR) whose body says the PR looks clean to you and notes any review-depth caveats.
 
 **Submit (single call):**
 

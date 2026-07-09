@@ -22,5 +22,5 @@ Expected behavior:
 - Check correctness, security, repository conventions, tests, and maintainability.
 - Prefer actionable comments over vague feedback.
 - Avoid duplicate comments.
-- Produce one consolidated review summary.
-- Include a clear verdict, following the shared policy: request changes or comment only; never auto-approve.
+- Produce one consolidated review summary, submitted as exactly one review (never a second).
+- Include a clear verdict, following the shared policy: `APPROVE` when clean, `REQUEST_CHANGES` on a blocking finding, else `COMMENT`.
