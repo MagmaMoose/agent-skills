@@ -22,10 +22,13 @@ dribble out one comment per API call (that spams the author with notifications).
 posting, check whether you've already left a review on the current head commit — if an
 equivalent one exists, don't duplicate it; report that instead (see step 6).
 
-**Verdict policy — never auto-approve.**
-- Any **blocking** finding present → submit as `REQUEST_CHANGES`.
-- No blocking findings → submit as `COMMENT`.
-- **Never `APPROVE`.** The approve-and-merge call stays with a human.
+**Verdict policy — the review CAN approve a clean PR.**
+- Not your own PR **and** zero **⛔ blocking** findings **and** zero **🟡 should-fix**
+  findings → submit as `APPROVE`.
+- Any **⛔ blocking** finding present → submit as `REQUEST_CHANGES`.
+- Otherwise (should-fixes but no blockers) → submit as `COMMENT`.
+- **Own-PR guard:** GitHub rejects `APPROVE` *and* `REQUEST_CHANGES` on a PR you authored, so
+  on your own PR always force `COMMENT` (see below).
 
 **Your own PR is a special case.** GitHub does not let you approve *or* request changes on
 a PR you authored — only `COMMENT` is accepted. So when the PR author is you, always submit
@@ -223,9 +226,9 @@ Tag every finding with one of:
 
 **Verdict** (from the policy at the top):
 - own PR → **`COMMENT`** always (blockers go under `### ⛔ Blocking` in the body).
-- not own PR, ≥1 blocking finding → **`REQUEST_CHANGES`**.
-- not own PR, no blocking findings → **`COMMENT`**.
-- never **`APPROVE`**.
+- not own PR, ≥1 ⛔ blocking finding → **`REQUEST_CHANGES`**.
+- not own PR, no ⛔ blocking but ≥1 🟡 should-fix → **`COMMENT`**.
+- not own PR, zero ⛔ blocking **and** zero 🟡 should-fix → **`APPROVE`**.
 
 ---
 
@@ -278,13 +281,15 @@ to create the payload file (avoids shell-quoting hell), then submit with `gh api
 ```
 
 Set `event` per step 3:
-- own PR → `"COMMENT"`.
-- not own PR + any ⛔ → `"REQUEST_CHANGES"`.
-- otherwise → `"COMMENT"`.
+- own PR → `"COMMENT"` (GitHub rejects `APPROVE`/`REQUEST_CHANGES` on your own PR).
+- not own PR + any ⛔ blocking → `"REQUEST_CHANGES"`.
+- not own PR + no ⛔ blocking but ≥1 🟡 should-fix → `"COMMENT"`.
+- not own PR + zero ⛔ blocking and zero 🟡 should-fix → `"APPROVE"`.
 
-If there are **no findings at all**, still post a `COMMENT` review whose body says the PR
-looks clean to you and notes the one remaining human action (review depth caveats, then
-approve/merge) — do **not** `APPROVE`.
+If there are **no findings at all** and it isn't your own PR, submit an `APPROVE` review whose
+body says the PR looks clean to you (noting any review-depth caveats). On your **own** clean
+PR, GitHub forbids `APPROVE`, so post a `COMMENT` review that says the same and leaves the
+approve/merge click to a human.
 
 **Submit (single call):**
 
@@ -294,11 +299,28 @@ gh api --method POST "repos/$OWNER/$REPO/pulls/$PR/reviews" \
   -q '"posted review " + (.id|tostring) + " — " + .state'
 ```
 
-**If it returns 422** (almost always a bad inline anchor — a line not in the diff), do **not**
-lose the feedback. Identify the offending comment from the error, move that finding into the
-body as a `path:line` bullet, drop it from `comments`, and re-POST. If you can't pin the bad
-one quickly, fall back to a **body-only** review that contains every finding as `path:line`
-bullets, post that, and note in the report that inline anchoring fell back to the summary.
+**If it returns 422** — do **not** blindly re-POST. A 422 does not always mean "nothing was
+created": GitHub can persist the review and *still* return a 422, so a naive retry double-posts
+(the observed bug). **Before touching the review again, re-list the PR's reviews and check
+whether one of yours already landed on the current `HEAD_SHA`:**
+
+```bash
+VIEWER=$(gh api user -q .login)   # the app/user this run posts as
+gh api "repos/$OWNER/$REPO/pulls/$PR/reviews" --paginate \
+  -q "[ .[] | select(.user.login == \"$VIEWER\" and .commit_id == \"$HEAD_SHA\") ] | length"
+```
+
+- **If that count is ≥ 1, a review by this app already exists on this HEAD_SHA — do NOT
+  re-POST.** The submission succeeded despite the 422. Report that (and the review id/state)
+  and **stop** — this is what preserves the "post exactly ONE review per run" and HEAD_SHA
+  idempotency guarantees.
+- **Only if no such review exists** was the POST a genuine failure. Then recover the feedback:
+  a 422 is almost always a bad inline anchor (a line not in the diff). Identify the offending
+  comment from the error, move that finding into the body as a `path:line` bullet, drop it from
+  `comments`, and re-POST **once**. If you can't pin the bad one quickly, fall back to a
+  **body-only** review that carries every finding as `path:line` bullets, post that once, and
+  note in the report that inline anchoring fell back to the summary. After any re-POST,
+  re-run the check above before ever posting again.
 
 **Clean up** the payload file afterward: `rm -f .git/review-pr.json`.
 
