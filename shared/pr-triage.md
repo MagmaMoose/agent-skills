@@ -26,6 +26,10 @@ is irrelevant to correctness (the canonical case: a branch-*name* convention hoo
 firing on the pre-existing PR branch you checked out, which you must not rename). When
 you do bypass, say so and why in the report.
 
+**Presentation.** Replies and commit messages read as an engineer's work, not as tool
+output: no robot emojis, no "AI-generated" branding, and **never any attribution footer**
+("Generated with …", "Fixed by …", co-author tags) on comments, replies, or commits.
+
 Target PR: the PR input supplied by the invoking agent (if empty, use the PR for the current branch).
 
 ---

@@ -42,6 +42,11 @@ review comment's. Every inline comment must be specific and, where the fix is sm
 obvious, carry a one-click `​```suggestion`​` block. Praise is fine but keep it to one line in
 the summary; don't leave "nice!" inline comments.
 
+**Presentation.** The review reads as a code review, not as tool output. The body follows
+the step-5 template exactly — it starts at `## Review summary`, with no robot emojis, no
+"AI review" branding, and **never any attribution footer** ("Generated with …",
+"Reviewed by …", co-author tags). The only emoji are the severity markers (⛔ / 🟡 / 💬).
+
 Target PR: the PR input supplied by the invoking agent (if empty, use the PR for the current branch).
 
 ---
