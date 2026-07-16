@@ -47,6 +47,11 @@ review comment's. Every inline comment must be specific and, where the fix is sm
 obvious, carry a one-click `​```suggestion`​` block. Praise is fine but keep it to one line in
 the summary; don't leave "nice!" inline comments.
 
+**Presentation.** The review reads as a code review, not as tool output. The body follows
+the step-5 template exactly — it starts at `## Review summary`, with no robot emojis, no
+"AI review" branding, and **never any attribution footer** ("Generated with …",
+"Reviewed by …", co-author tags). The only emoji are the severity markers (⛔ / 🟡 / 💬).
+
 Target PR: the PR input supplied by the invoking agent (if empty, use the PR for the current branch).
 
 ---
@@ -302,11 +307,28 @@ gh api --method POST "repos/$OWNER/$REPO/pulls/$PR/reviews" \
   -q '"posted review " + (.id|tostring) + " — " + .state'
 ```
 
-**If it returns 422** (almost always a bad inline anchor — a line not in the diff), do **not**
-lose the feedback. Identify the offending comment from the error, move that finding into the
-body as a `path:line` bullet, drop it from `comments`, and re-POST. If you can't pin the bad
-one quickly, fall back to a **body-only** review that contains every finding as `path:line`
-bullets, post that, and note in the report that inline anchoring fell back to the summary.
+**If it returns 422** — do **not** blindly re-POST. A 422 does not always mean "nothing was
+created": GitHub can persist the review and *still* return a 422, so a naive retry double-posts
+(the observed bug). **Before touching the review again, re-list the PR's reviews and check
+whether one of yours already landed on the current `HEAD_SHA`:**
+
+```bash
+VIEWER=$(gh api user -q .login)   # the app/user this run posts as
+gh api "repos/$OWNER/$REPO/pulls/$PR/reviews" --paginate \
+  -q "[ .[] | select(.user.login == \"$VIEWER\" and .commit_id == \"$HEAD_SHA\") ] | length"
+```
+
+- **If that count is ≥ 1, a review by this app already exists on this HEAD_SHA — do NOT
+  re-POST.** The submission succeeded despite the 422. Report that (and the review id/state)
+  and **stop** — this is what preserves the "post exactly ONE review per run" and HEAD_SHA
+  idempotency guarantees.
+- **Only if no such review exists** was the POST a genuine failure. Then recover the feedback:
+  a 422 is almost always a bad inline anchor (a line not in the diff). Identify the offending
+  comment from the error, move that finding into the body as a `path:line` bullet, drop it from
+  `comments`, and re-POST **once**. If you can't pin the bad one quickly, fall back to a
+  **body-only** review that carries every finding as `path:line` bullets, post that once, and
+  note in the report that inline anchoring fell back to the summary. After any re-POST,
+  re-run the check above before ever posting again.
 
 **Clean up** the payload file afterward: `rm -f .git/review-pr.json`.
 
