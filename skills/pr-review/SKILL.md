@@ -22,5 +22,5 @@ Expected behavior:
 - Check correctness, security, repository conventions, tests, and maintainability.
 - Prefer actionable comments over vague feedback.
 - Avoid duplicate comments.
-- Produce one consolidated review summary.
-- Include a clear verdict, following the shared policy: approve when it isn't your own PR and there are zero blocking and zero should-fix findings; request changes on any blocking finding; comment otherwise (and always comment on your own PR, since GitHub forbids approving it).
+- Produce one consolidated review summary, submitted as exactly one review (never a second).
+- Include a clear verdict, following the shared policy: `APPROVE` when clean, `REQUEST_CHANGES` on a blocking finding, else `COMMENT`.
