@@ -25,7 +25,11 @@ summary. The review should read as if a senior engineer wrote it, not a model.
   "moreover", "it's important to note", "seamlessly", "elevate", "unpack", "meticulously",
   and "robust" / "comprehensive" used as filler.
 - No sycophantic openers ("Great work!", "Excellent PR!") and no hedging filler ("perhaps
-  you might want to consider"). Say the thing directly.
+  you might want to consider"). Say the thing directly. And no severity-undercutting hedges:
+  on a ⛔ or 🟡, don't call the problem "practically safe for now", "probably fine", or "only
+  theoretical" — name the concrete failure mode and the fix. If the honest read is that
+  nothing actually needs to change, it's a 💬 nit, not a 🟡 (see the severity-honesty rule
+  in section 3).
 - Skip decorative headings when a short paragraph does the job. Cut trailing boilerplate
   like "Let me know if you have any questions".
 - Substance beats style. Never drop a specific `file:line` finding or a concrete fix just
@@ -252,13 +256,28 @@ This stack has non-negotiable conventions from `CLAUDE.md`. A PR that breaks one
 
 Tag every finding with one of:
 
-- **⛔ Blocking** — correctness/security bug, a `CLAUDE.md` hard-rule violation, contract
-  drift, or a missing migration. Any one of these makes the verdict `REQUEST_CHANGES`.
-- **🟡 Should-fix** — real problem but not merge-blocking on its own (missing test for
-  non-trivial logic, a likely-but-unconfirmed perf issue, a fragile pattern). On their own,
-  should-fixes → `COMMENT`.
-- **💬 Nit / optional** — style/readability suggestion the author can take or leave. Prefix
-  the inline comment with `nit:` so the author knows it's optional. Never block on a nit.
+- **⛔ Blocking** — a failure the reader can hit now, on this diff: a correctness/security
+  bug, a `CLAUDE.md` hard-rule violation, contract drift, or a missing migration. Litmus:
+  someone hits this with the code as merged. Any one → `REQUEST_CHANGES`.
+- **🟡 Should-fix** — not merge-blocking, but a real gap the author should close: EITHER a
+  concrete failure still reachable in the code as it stands (point to the input or path that
+  hits it today), OR missing tests for non-trivial new logic, OR a likely-but-unconfirmed
+  perf issue. A fragile or defensive pattern counts ONLY if that fragility is reachable now;
+  if the existing code already prevents the failure and the point is future-proofing ("if
+  someone removes X later", "if a new caller feeds this"), it's a 💬 nit, not a 🟡. On their
+  own, should-fixes → `COMMENT`.
+- **💬 Nit / optional** — nothing breaks if the author ignores it: style, readability, or
+  defensive hardening they can take or leave. Litmus: nothing breaks if they skip it. Prefix
+  the inline comment with `nit:`. Never block on a nit.
+
+**Severity honesty.** The label and the prose must agree. If your text for a 🟡 says the
+current code makes the failure "practically safe", "probably fine", or "only theoretical",
+and the only failure you can name is hypothetical ("if someone removes X later"), it's a 💬
+nit — relabel it. (Missing coverage for non-trivial logic stays a 🟡 even though nothing
+"fails today".) Keep a true mitigation note if it's real; just don't label take-it-or-leave-it
+hardening as a should-fix. If relabeling leaves no ⛔ and no 🟡, the verdict is `APPROVE` per
+the policy above — that's the honest call for a mergeable PR, so don't inflate a nit to avoid
+it. A 🟡 must name either a failure reachable today or missing coverage for non-trivial logic.
 
 **Verdict** (from the policy at the top):
 - own PR → **`COMMENT`** always (blockers go under `### ⛔ Blocking` in the body).
@@ -282,6 +301,20 @@ read its hunk headers `@@ -old,+new @@` and classify each line:
 - **A line that is NOT in any hunk** (untouched code, a whole-file or architectural concern,
   or a "this should have changed too but didn't" point) **cannot take an inline comment** —
   put it in the review **body** instead, citing `path:line` in prose so it's still precise.
+
+**A concrete fix belongs on a diff line, not in the body.** Before concluding a finding is
+body-only, check whether it's actually about a line inside a hunk. If a finding is about any
+in-diff line (added, removed, or an adjacent line it interacts with), make it an INLINE
+comment on the nearest in-diff line it's actually about, and carry a `suggestion` when the
+fix target is itself an in-diff line and the change is small. Re-anchor when the line you
+first named sits just outside the diff: a guard finding might name the `if` on line 500 (one
+above the hunk) while the `.slice(0, 10)` it's really about sits on the added line 504, so the
+comment rides 504 and spells out the fix. If the exact line to change is out of diff, a
+one-click `suggestion` can't apply to it: say so and give the exact replacement to paste. The
+body is only for findings with NO anchorable line: a whole-file or architectural concern, a
+cross-file test-coverage gap, or a "this should have changed too but didn't" point. Every
+anchorable finding goes inline, and a should-fix in particular must never be demoted to the
+body while a lower-severity nit rides inline.
 
 When the fix is small and unambiguous, make the inline comment a GitHub suggestion so the
 author can apply it in one click:
@@ -349,13 +382,21 @@ newlines** (never the two literal characters `\n`). It starts at `## Review summ
 ```markdown
 ## Review summary
 
-<2–4 sentences: what the PR does, your overall read, and the verdict in words>
+<2–4 sentences: what the PR does and your overall read.>
+
+**Bottom line:** <ONE required sentence stating mergeability and the single next action,
+keyed to your highest-severity finding (NOT the API event — an own PR is forced to `COMMENT`
+even with a blocker). No ⛔/🟡 → say so plainly, e.g. "Nothing here blocks merge, nothing to
+fix". 🟡 only → name the top should-fix as worth doing before it lands, without implying it
+blocks merge. Any ⛔ → "blocks merge" and name it. Point at inline fixes rather than restating
+them, e.g. "tighten the regex at `ReportPageLayout.tsx:500` (inline)". No em-dash, no
+checklist — the sections and inline comments carry the detail.>
 
 ### ⛔ Blocking
 - `path:line`: <what & why> (only this section on your OWN PR; otherwise blockers ride REQUEST_CHANGES)
 
 ### 🟡 Should-fix
-- `path:line`: <…>
+- `path:line`: <a should-fix with NO anchorable diff line, e.g. a cross-file test-coverage gap or a "this file should have changed too" point. If the fix lands on a diff line it's an inline comment carrying a suggestion (step 4), not a bullet here. At most restate an inline one in a single line so the body still reads as a complete summary.>
 
 ### 💬 Notes
 - <whole-file / architectural / not-in-diff points that couldn't be inline>
