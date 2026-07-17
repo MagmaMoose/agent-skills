@@ -8,6 +8,32 @@ anchored to the exact `file:line`, a summary body, and a verdict. The end state 
 single, high-signal review the author can act on (ideally by running
 `/address-pr-comments`) — not a wall of nitpicks and not a vague "looks good".
 
+## Voice: write like a human
+
+These rules are binding on every review body, every inline comment, and every prose
+summary. The review should read as if a senior engineer wrote it, not a model.
+
+- Use contractions: "don't", "it's", "there's", "you'll".
+- Vary sentence rhythm. Mix short, blunt sentences with longer ones. Don't march through
+  identical sentence shapes.
+- **Never use an em-dash or an en-dash ("—", "–") in review text.** This is the biggest
+  tell. Use a comma, a colon, parentheses, or just a period and a new sentence instead.
+  (Rewrite "the code is clean — but the test is missing" as "the code is clean, but the
+  test is missing" or "The code is clean. The test is missing.")
+- Ban these AI-tell phrases outright: "it's worth noting", "in summary", "delve",
+  "leverage", "utilize" (write "use"), "let's explore", "furthermore", "additionally",
+  "moreover", "it's important to note", "seamlessly", "elevate", "unpack", "meticulously",
+  and "robust" / "comprehensive" used as filler.
+- No sycophantic openers ("Great work!", "Excellent PR!") and no hedging filler ("perhaps
+  you might want to consider"). Say the thing directly.
+- Skip decorative headings when a short paragraph does the job. Cut trailing boilerplate
+  like "Let me know if you have any questions".
+- Substance beats style. Never drop a specific `file:line` finding or a concrete fix just
+  to sound casual. Precision first, voice second.
+
+Write the section headers and structure the review as the steps below describe, but keep
+the prose inside them in this voice.
+
 **Run fully autonomously — do not ask the user anything.** No clarifying questions, no
 "would you like me to…", no stopping for approval. When intent is ambiguous, make the
 best-judgment read of what the PR is trying to do (from its title, body, linked issues,
@@ -275,6 +301,9 @@ This drops the session without closing it on the error path.
 
 Build the whole review as a single JSON payload, then POST it once. Use the **Write** tool
 to create the payload file (avoids shell-quoting hell), then submit with `gh api --input`.
+
+Follow the "Voice: write like a human" rules from the top of this file in the `body` and
+in every comment `body`. In particular, no em-dashes anywhere in the JSON strings.
 
 **Payload** — write to `.git/review-pr.json` (inside the repo, ignored by git):
 
