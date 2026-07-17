@@ -1,7 +1,7 @@
 ---
 description: Review a pull request end to end (correctness, security, repo conventions, tests) and post ONE consolidated GitHub review with inline comments + a verdict
 argument-hint: "[PR number or URL - defaults to the PR for the current branch]"
-allowed-tools: Bash(gh:*), Bash(git:*), Bash(rm:*), Read, Grep, Glob, Write
+allowed-tools: Bash(gh:*), Bash(git:*), Bash(python3:*), Bash(rm:*), Read, Grep, Glob, Write
 ---
 
 Review a PR end to end using the shared MagmaMoose PR review workflow.

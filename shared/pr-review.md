@@ -299,36 +299,96 @@ This drops the session without closing it on the error path.
 
 ## 5. Assemble and submit ONE review
 
-Build the whole review as a single JSON payload, then POST it once. Use the **Write** tool
-to create the payload file (avoids shell-quoting hell), then submit with `gh api --input`.
+Build the whole review as a single JSON payload, then POST it once. Getting Markdown
+(suggestion blocks, multi-line bodies) into JSON by hand is where escaping bugs creep in, so
+let the payload builder assemble and validate the JSON rather than hand-escaping newlines.
 
-Follow the "Voice: write like a human" rules from the top of this file in the `body` and
-in every comment `body`. In particular, no em-dashes anywhere in the JSON strings.
+Follow the "Voice: write like a human" rules from the top of this file in the `body` and in
+every comment `body`. No em-dashes anywhere in the review text.
 
-**Payload** — write to `.git/review-pr.json` (inside the repo, ignored by git):
+**a) Locate the payload builder.** Use the first of these paths that exists as
+`$PAYLOAD_BUILDER` (same resolution order as the rubric itself):
+
+1. `${CLAUDE_PLUGIN_ROOT}/scripts/build-review-payload.py` — installed as a plugin
+2. `.claude/scripts/build-review-payload.py` — headless runs (Nievah installs it into the PR clone)
+3. `scripts/build-review-payload.py` — working inside the agent-skills checkout
+
+If none exists (e.g. a headless clone without `scripts/`) or `python3` isn't available, skip
+to the **Fallback** below.
+
+**b) Write the review body** to `.git/review-body.md` as plain Markdown with **real
+newlines** (never the two literal characters `\n`). It starts at `## Review summary`:
+
+```markdown
+## Review summary
+
+<2–4 sentences: what the PR does, your overall read, and the verdict in words>
+
+### ⛔ Blocking
+- `path:line` — <what & why> (only this section on your OWN PR; otherwise blockers ride REQUEST_CHANGES)
+
+### 🟡 Should-fix
+- `path:line` — <…>
+
+### 💬 Notes
+- <whole-file / architectural / not-in-diff points that couldn't be inline>
+
+_One line of genuine praise, if warranted._
+```
+
+**c) Write the inline comments** to `.git/review-comments.json` as a JSON array. Each entry
+carries its anchor from step 4 (`path` + `line`/`side`, or `start_line`/`start_side` +
+`line`/`side`) plus the comment text. Put short text inline as `"body"`; when it carries a
+suggestion block or spans multiple lines, point `"body_file"` at a Markdown file (path
+relative to this JSON file, so keep it in `.git/`) and never escape it:
+
+```json
+[
+  { "path": "apps/api/server/routes/items.py", "line": 42, "side": "RIGHT", "body": "⛔ <finding>" },
+  { "path": "packages/schemas/src/item.ts", "start_line": 10, "start_side": "RIGHT", "line": 14, "side": "RIGHT", "body_file": "review-comment-1.md" }
+]
+```
+
+Use `[]` (or omit `--comments-file`) when there are no inline comments.
+
+**d) Build and validate the payload.** The builder folds each `body_file` into its comment,
+sets `event`, and rejects empty bodies or literal `\n` before you ever hit the API:
+
+```bash
+python3 "$PAYLOAD_BUILDER" build \
+  --commit-id "$HEAD_SHA" \
+  --event COMMENT \
+  --body-file .git/review-body.md \
+  --comments-file .git/review-comments.json \
+  --output .git/review-pr.json
+```
+
+Set `--event` per step 3: own PR → `COMMENT`; not own + any ⛔ → `REQUEST_CHANGES`; not own +
+only 🟡 → `COMMENT`; not own + clean → `APPROVE`. If there are **no findings at all**, still
+write a body (the PR looks clean to you, plus any review-depth caveats) and use `APPROVE`
+(or `COMMENT` on your own PR).
+
+**Fallback (no builder found, or no `python3`).** Write the whole payload JSON straight to
+`.git/review-pr.json` with the **Write** tool — real newlines inside the strings, since the
+Write tool doesn't go through the shell:
 
 ```json
 {
   "commit_id": "<HEAD_SHA>",
   "event": "COMMENT",
-  "body": "## Review summary\n\n<2–4 sentences: what the PR does, your overall read, and the verdict in words>\n\n### ⛔ Blocking\n- `path:line` — <what & why> (only this section on your OWN PR; otherwise blockers ride REQUEST_CHANGES)\n\n### 🟡 Should-fix\n- `path:line` — <…>\n\n### 💬 Notes\n- <whole-file / architectural / not-in-diff points that couldn't be inline>\n\n_One line of genuine praise, if warranted._",
+  "body": "## Review summary\n\n<2–4 sentences>\n\n### 🟡 Should-fix\n- `path:line` — <…>\n\n_One line of genuine praise, if warranted._",
   "comments": [
-    { "path": "apps/api/server/routes/items.py", "line": 42, "side": "RIGHT", "body": "⛔ <finding + optional ```suggestion block>" },
+    { "path": "apps/api/server/routes/items.py", "line": 42, "side": "RIGHT", "body": "⛔ <finding>" },
     { "path": "packages/schemas/src/item.ts", "start_line": 10, "start_side": "RIGHT", "line": 14, "side": "RIGHT", "body": "🟡 <finding>" }
   ]
 }
 ```
 
-Set `event` per step 3:
-- own PR → `"COMMENT"`.
-- not own PR + any ⛔ → `"REQUEST_CHANGES"`.
-- not own PR + only 🟡 should-fixes (no ⛔) → `"COMMENT"`.
-- not own PR + no ⛔ and no 🟡 → `"APPROVE"`.
+Set `event` (`APPROVE` / `REQUEST_CHANGES` / `COMMENT`) by the same rule as step d. If the
+builder is present you can still sanity-check a hand-written payload with
+`python3 "$PAYLOAD_BUILDER" check .git/review-pr.json`.
 
-If there are **no findings at all**, post an `"APPROVE"` review (or `"COMMENT"` if it's your
-own PR) whose body says the PR looks clean to you and notes any review-depth caveats.
-
-**Submit (single call):**
+**e) Submit (single call):**
 
 ```bash
 gh api --method POST "repos/$OWNER/$REPO/pulls/$PR/reviews" \
@@ -359,7 +419,7 @@ gh api "repos/$OWNER/$REPO/pulls/$PR/reviews" --paginate \
   note in the report that inline anchoring fell back to the summary. After any re-POST,
   re-run the check above before ever posting again.
 
-**Clean up** the payload file afterward: `rm -f .git/review-pr.json`.
+**Clean up** the scratch files afterward: `rm -f .git/review-pr.json .git/review-body.md .git/review-comments.json .git/review-comment-*.md`.
 
 ---
 
