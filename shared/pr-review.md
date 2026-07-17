@@ -325,10 +325,10 @@ newlines** (never the two literal characters `\n`). It starts at `## Review summ
 <2–4 sentences: what the PR does, your overall read, and the verdict in words>
 
 ### ⛔ Blocking
-- `path:line` — <what & why> (only this section on your OWN PR; otherwise blockers ride REQUEST_CHANGES)
+- `path:line`: <what & why> (only this section on your OWN PR; otherwise blockers ride REQUEST_CHANGES)
 
 ### 🟡 Should-fix
-- `path:line` — <…>
+- `path:line`: <…>
 
 ### 💬 Notes
 - <whole-file / architectural / not-in-diff points that couldn't be inline>
@@ -376,7 +376,7 @@ Write tool doesn't go through the shell:
 {
   "commit_id": "<HEAD_SHA>",
   "event": "COMMENT",
-  "body": "## Review summary\n\n<2–4 sentences>\n\n### 🟡 Should-fix\n- `path:line` — <…>\n\n_One line of genuine praise, if warranted._",
+  "body": "## Review summary\n\n<2–4 sentences>\n\n### 🟡 Should-fix\n- `path:line`: <…>\n\n_One line of genuine praise, if warranted._",
   "comments": [
     { "path": "apps/api/server/routes/items.py", "line": 42, "side": "RIGHT", "body": "⛔ <finding>" },
     { "path": "packages/schemas/src/item.ts", "start_line": 10, "start_side": "RIGHT", "line": 14, "side": "RIGHT", "body": "🟡 <finding>" }
