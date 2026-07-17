@@ -1,7 +1,7 @@
 {
   "name": "claude-skills",
   "displayName": "MagmaMoose Agent Skills for Claude",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Shared PR review and PR triage workflows for Claude Code. The claude-skills name is kept to preserve slash commands.",
   "author": {
     "name": "Caleb Sargeant",

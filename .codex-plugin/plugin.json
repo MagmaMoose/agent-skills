@@ -1,6 +1,6 @@
 {
   "name": "agent-skills",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shared PR review and PR triage workflows for MagmaMoose agents.",
   "author": {
     "name": "Caleb Sargeant",

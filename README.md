@@ -80,10 +80,17 @@ Use the pr-triage skill on PR 123.
 ├── commands/
 ├── skills/
 ├── shared/
+├── scripts/
 ├── README.md
 ├── LICENSE
 └── .gitignore
 ```
+
+`scripts/build-review-payload.py` assembles and validates the single GitHub review payload
+for `pr-review` (stdlib-only Python 3), so review bodies and inline comments are written as
+plain Markdown instead of hand-escaped JSON. The `pr-review` workflow finds it under
+`${CLAUDE_PLUGIN_ROOT}/scripts/`, `.claude/scripts/`, or `scripts/`, and falls back to a
+hand-written payload when it isn't present.
 
 ## License
 
