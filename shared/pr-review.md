@@ -295,6 +295,33 @@ This drops the session without closing it on the error path.
 ```
 ````
 
+### Suggestion safety — a broken suggestion is worse than no suggestion
+
+GitHub applies a suggestion by replacing EXACTLY the commented line range with the block.
+Three hard rules keep one-click Apply from committing broken code:
+
+1. **Span the whole syntactic unit.** If your replacement touches any part of a
+   multi-line statement (a `re.compile(` call, a function signature, a dict literal, a
+   YAML mapping), the comment MUST be a multi-line comment anchored from the statement's
+   first line to its last (`start_line`..`line`), and the suggestion must contain the
+   complete replacement statement. Anchoring to just the opening line while the old
+   continuation lines remain below is how you commit a syntax error on the author's
+   behalf.
+2. **Prove it applies cleanly before you post.** You are sitting in a full clone: apply
+   the replacement to the file at exactly the lines you're anchoring, then check the file
+   still parses (`python3 -m py_compile <file>`, `bash -n`, `node --check`, `ruby -c`, or
+   the obvious parser for the file type; a quick `python3 -c "import yaml,sys;
+   yaml.safe_load(open(sys.argv[1]))" <file>` for YAML). Revert with
+   `git checkout -- <file>` afterwards. If you can't make it parse as a suggestion,
+   post the idea as a plain fenced snippet instead and say the author should fold it in
+   by hand.
+3. **Give the Apply box a real commit title.** GitHub pre-fills the Apply-suggestion
+   commit as "Update <file>", and reviewers can't change that default. So under every
+   suggestion block, add one line the author can paste into the commit-title box, in
+   Conventional Commits form:
+
+   `Commit title for the Apply box: fix(reconcile): match port-qualified registries`
+
 ---
 
 ## 5. Assemble and submit ONE review
