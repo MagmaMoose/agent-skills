@@ -188,6 +188,33 @@ Skip a thread (do **not** fix/resolve it) when:
 For anything you skip that a human might expect to be handled, note it in your final
 summary with a one-line reason — don't silently drop it.
 
+### 2a. Security scanner false positives — suppress, don't just explain
+
+When a security scanner (Chargate, KICS, CodeQL, Semgrep, Trunk, etc.) flags a
+finding that is a false positive AND the scanner's check is a required CI gate,
+**explaining "false positive" in a reply is not enough** — the check will still
+fail and block merge. You MUST make the scanner pass:
+
+1. **Find the scanner's suppression syntax.** Common patterns:
+   - `# kics-scan disable=<rule-id>` (KICS / Checkov)
+   - `// nosemgrep: <rule-id>` (Semgrep)
+   - `# nosec` (Bandit)
+   - Inline `# trunk-ignore(<linter>/<rule>)` (Trunk)
+   - Check the target repo for existing suppressions: grep for `disable=`,
+     `nosem`, `nosec`, `suppress`.
+
+2. **Add the suppression as close to the flagged line as possible**, with a
+   comment on the preceding line(s) explaining why it's a false positive.
+
+3. **Commit and push** — the CI check will re-run against your commit. Verify it
+   turns green before replying to the thread.
+
+4. **Then** reply to the thread referencing the suppression commit SHA, and
+   resolve it.
+
+Never dismiss a security alert through the API (`PATCH … state=dismissed`) —
+dismissal is a human judgment call. Always fix or suppress inline.
+
 If a comment is **ambiguous or opinionated**, do not ask — make the most reasonable
 interpretation, implement it, and state the assumption you made in the in-thread reply
 (step 4) and in the summary. Resolve the thread as normal. Only leave a thread
