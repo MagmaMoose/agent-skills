@@ -35,8 +35,10 @@ When a security scanner flags a false positive on a PR that blocks merge:
 1. **Find the scanner's suppression syntax.** Common patterns:
    - `# kics-scan disable=<rule-id>` (KICS / Checkov) — **must be at file
      line 1, column 0**; KICS silently ignores inline and indented
-     suppression comments. Place at top of file, optionally with a `---`
-     YAML document separator before the real content.
+     suppression comments. Do NOT insert a `---` YAML document separator
+     between the suppression and content — KICS may skip preceding comments.
+   - `# kics-ignore` (KICS) — simpler inline fallback, place on the flagged
+     line: `- secretKey: FOO  # kics-ignore`
    - `// nosemgrep: <rule-id>` (Semgrep)
    - `# nosec` (Bandit)
    - Inline `# trunk-ignore(<linter>/<rule>)` (Trunk)
@@ -45,14 +47,17 @@ When a security scanner flags a false positive on a PR that blocks merge:
      the placement** (inline vs file-top vs line-above) by inspecting a
      working example.
 
-2. **Add the suppression using the exact placement that the scanner recognizes.**
+2. **Add the suppression using the exact placement the scanner recognizes.**
    If unsure, grep the repo for existing suppressions of the same type and
    copy their placement. A suppression in the wrong position (indented,
-   inline when file-top is required) will be silently ignored.
+   inline when file-top is required) will be silently ignored. **If the
+   first attempt fails** (CI still red): combine formats — file-top
+   `# kics-scan disable=` plus inline `# kics-ignore` are harmless together.
 
 3. **Commit, push, and verify the CI check turns green** before replying to
-   the thread. If it doesn't, the suppression placement is wrong — fix it
-   and push again.
+   the thread. If it doesn't, the suppression placement or format is wrong
+   — try a different combination and push again. Never reply "false positive"
+   and resolve while CI is still red.
 
 Never dismiss a security alert through the API — dismissal is a human judgment
 call. Always fix or suppress inline.
