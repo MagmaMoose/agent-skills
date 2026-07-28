@@ -196,18 +196,26 @@ finding that is a false positive AND the scanner's check is a required CI gate,
 fail and block merge. You MUST make the scanner pass:
 
 1. **Find the scanner's suppression syntax.** Common patterns:
-   - `# kics-scan disable=<rule-id>` (KICS / Checkov)
+   - `# kics-scan disable=<rule-id>` (KICS / Checkov) — **must be at file
+     line 1, column 0**; KICS silently ignores inline and indented
+     suppression comments. Place at the very top of the file, optionally
+     with a `---` YAML document separator before the real content.
    - `// nosemgrep: <rule-id>` (Semgrep)
    - `# nosec` (Bandit)
    - Inline `# trunk-ignore(<linter>/<rule>)` (Trunk)
    - Check the target repo for existing suppressions: grep for `disable=`,
-     `nosem`, `nosec`, `suppress`.
+     `nosem`, `nosec`, `suppress`. **Inspect a working example to verify
+     placement** — a suppression in the wrong position will be silently
+     ignored and the check will fail again.
 
-2. **Add the suppression as close to the flagged line as possible**, with a
-   comment on the preceding line(s) explaining why it's a false positive.
+2. **Add the suppression using the exact placement the scanner recognizes.**
+   Copy the placement from a working suppression in the same repo. If no
+   examples exist, try file-top first (line 1, column 0) for KICS/Checkov.
 
-3. **Commit and push** — the CI check will re-run against your commit. Verify it
-   turns green before replying to the thread.
+3. **Commit and push** — the CI check will re-run against your commit. Verify
+   it turns green before replying to the thread. **If it doesn't turn green,
+   the suppression placement is wrong** — do not reply and resolve yet. Fix
+   the placement and push again.
 
 4. **Then** reply to the thread referencing the suppression commit SHA, and
    resolve it.
