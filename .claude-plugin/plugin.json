@@ -1,8 +1,8 @@
 {
   "name": "claude-skills",
   "displayName": "MagmaMoose Agent Skills for Claude",
-  "version": "0.1.1",
-  "description": "Shared PR review and PR triage workflows for Claude Code. The claude-skills name is kept to preserve slash commands.",
+  "version": "0.2.0",
+  "description": "Shared PR review, PR triage, and documentation sync workflows for Claude Code. The claude-skills name is kept to preserve slash commands.",
   "author": {
     "name": "Caleb Sargeant",
     "email": "caleb@magmamoose.com",
@@ -11,5 +11,5 @@
   "homepage": "https://github.com/magmamoose/agent-skills",
   "repository": "https://github.com/magmamoose/agent-skills",
   "license": "MIT",
-  "keywords": ["pr-review", "pr-triage", "code-review", "automation"]
+  "keywords": ["pr-review", "pr-triage", "code-review", "documentation", "mkdocs", "automation"]
 }
