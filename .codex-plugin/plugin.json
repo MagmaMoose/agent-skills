@@ -1,7 +1,7 @@
 {
   "name": "agent-skills",
-  "version": "1.0.1",
-  "description": "Shared PR review and PR triage workflows for MagmaMoose agents.",
+  "version": "1.1.0",
+  "description": "Shared PR review, PR triage, and documentation sync workflows for MagmaMoose agents.",
   "author": {
     "name": "Caleb Sargeant",
     "email": "caleb@magmamoose.com",
@@ -10,19 +10,20 @@
   "homepage": "https://github.com/magmamoose/agent-skills",
   "repository": "https://github.com/magmamoose/agent-skills",
   "license": "MIT",
-  "keywords": ["pr-review", "pr-triage", "code-review", "automation"],
+  "keywords": ["pr-review", "pr-triage", "code-review", "documentation", "mkdocs", "automation"],
   "skills": "./skills/",
   "interface": {
     "displayName": "MagmaMoose Agent Skills",
-    "shortDescription": "Shared PR review and triage workflows.",
-    "longDescription": "Shared PR review and PR triage workflows for MagmaMoose agents, packaged as reusable Codex skills.",
+    "shortDescription": "Shared PR review, triage, and docs sync workflows.",
+    "longDescription": "Shared PR review, PR triage, and documentation sync workflows for MagmaMoose agents, packaged as reusable Codex skills.",
     "developerName": "MagmaMoose",
     "category": "Productivity",
     "capabilities": ["Review", "Write"],
     "websiteURL": "https://github.com/magmamoose/agent-skills",
     "defaultPrompt": [
       "Use the pr-review skill on PR 123.",
-      "Use the pr-triage skill on PR 123."
+      "Use the pr-triage skill on PR 123.",
+      "Use the update-docs skill to sync ./docs with the code."
     ]
   }
 }
