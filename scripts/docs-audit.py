@@ -120,6 +120,7 @@ class Page:
     anchors: set[str] = field(default_factory=set)
     sources: list[str] = field(default_factory=list)
     fences: list[tuple[int, str]] = field(default_factory=list)  # (line, info string)
+    offset: int = 0
 
 
 # --------------------------------------------------------------------------- #
@@ -194,7 +195,7 @@ def load_page(path: Path, docs_dir: Path) -> Page:
     body, offset = strip_frontmatter(raw)
     lines = body.splitlines()
     page = Page(path=path, rel=str(path.relative_to(docs_dir)).replace(os.sep, "/"),
-                text=body, lines=lines)
+                text=body, lines=lines, offset=offset)
 
     page.sources = [
         s.strip()
@@ -247,7 +248,7 @@ def load_page(path: Path, docs_dir: Path) -> Page:
 def iter_links(page: Page) -> Iterable[tuple[int, str, bool]]:
     """Yield (line_no, target, is_image) for links outside fenced code."""
     in_fence = False
-    for idx, line in enumerate(page.lines, start=1):
+    for idx, line in enumerate(page.lines, start=page.offset + 1):
         fm = FENCE_RE.match(line)
         if fm:
             info = fm.group(3).strip()
@@ -444,7 +445,7 @@ def check_body(page: Page, findings: list[Finding], stub_words: int) -> None:
 
 
 def check_secrets(page: Page, findings: list[Finding]) -> None:
-    for idx, line in enumerate(page.lines, start=1):
+    for idx, line in enumerate(page.lines, start=page.offset + 1):
         low = line.lower()
         for name, pattern in SECRET_PATTERNS:
             m = pattern.search(line)
