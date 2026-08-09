@@ -34,7 +34,7 @@ Treat target-repository hard rules as blockers.
   xcrun --sdk appletvsimulator swiftc -typecheck \
     -target arm64-apple-tvos<DEPLOYMENT_TARGET>-simulator \
     -sdk "$(xcrun --sdk appletvsimulator --show-sdk-path)" \
-    $(find <SOURCE_ROOT> -name '*.swift')
+    $(find <SOURCE_ROOT> -name '*.swift' -not -path '*/Tests/*' -not -path '*Tests.swift')
   ```
 
   `DEVELOPER_DIR` goes in the *same* command as every `xcrun` call, the version in `-target` must

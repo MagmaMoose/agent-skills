@@ -37,7 +37,7 @@ export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 xcrun --sdk appletvsimulator swiftc -typecheck \
   -target arm64-apple-tvos<DEPLOYMENT_TARGET>-simulator \
   -sdk "$(xcrun --sdk appletvsimulator --show-sdk-path)" \
-  $(find <SOURCE_ROOT> -name '*.swift')
+  $(find <SOURCE_ROOT> -name '*.swift' -not -path '*/Tests/*' -not -path '*Tests.swift')
 ```
 
 Read `<DEPLOYMENT_TARGET>` out of the project file rather than guessing — the version in `-target`
