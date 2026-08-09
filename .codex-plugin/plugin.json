@@ -1,7 +1,7 @@
 {
   "name": "agent-skills",
-  "version": "1.1.0",
-  "description": "Shared PR review, PR triage, and documentation sync workflows for MagmaMoose agents.",
+  "version": "1.2.0",
+  "description": "Shared PR review, PR triage, documentation sync, and tvOS SwiftUI workflows for MagmaMoose agents.",
   "author": {
     "name": "Caleb Sargeant",
     "email": "caleb@magmamoose.com",
@@ -10,12 +10,12 @@
   "homepage": "https://github.com/magmamoose/agent-skills",
   "repository": "https://github.com/magmamoose/agent-skills",
   "license": "MIT",
-  "keywords": ["pr-review", "pr-triage", "code-review", "documentation", "mkdocs", "automation"],
+  "keywords": ["pr-review", "pr-triage", "code-review", "documentation", "mkdocs", "tvos", "swiftui", "automation"],
   "skills": "./skills/",
   "interface": {
     "displayName": "MagmaMoose Agent Skills",
-    "shortDescription": "Shared PR review, triage, and docs sync workflows.",
-    "longDescription": "Shared PR review, PR triage, and documentation sync workflows for MagmaMoose agents, packaged as reusable Codex skills.",
+    "shortDescription": "Shared PR review, triage, docs sync, and tvOS SwiftUI workflows.",
+    "longDescription": "Shared PR review, PR triage, documentation sync, and tvOS SwiftUI workflows for MagmaMoose agents, packaged as reusable Codex skills.",
     "developerName": "MagmaMoose",
     "category": "Productivity",
     "capabilities": ["Review", "Write"],
@@ -23,7 +23,8 @@
     "defaultPrompt": [
       "Use the pr-review skill on PR 123.",
       "Use the pr-triage skill on PR 123.",
-      "Use the update-docs skill to sync ./docs with the code."
+      "Use the update-docs skill to sync ./docs with the code.",
+      "Use the tvos-swiftui skill on issue 42."
     ]
   }
 }

@@ -2,7 +2,7 @@
 
 Shared agent workflows for the MagmaMoose stack, packaged for Claude Code and Codex.
 
-This repository keeps one source of truth for PR review, PR triage, and documentation sync. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
+This repository keeps one source of truth for PR review, PR triage, documentation sync, and tvOS SwiftUI work. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
 
 Do not fork these workflows per project. Put project-specific rules in the target repository's `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, or relevant `README.md` files. The adapters instruct agents to read those files before acting and to treat explicit hard rules as blockers.
 
@@ -13,12 +13,19 @@ Do not fork these workflows per project. Put project-specific rules in the targe
 | PR review | `/claude-skills:pr-review` | `pr-review` |
 | PR triage | `/claude-skills:pr-triage` | `pr-triage` |
 | Docs sync | `/claude-skills:update-docs` | `update-docs` |
+| tvOS SwiftUI | `/claude-skills:tvos-swiftui` | `tvos-swiftui` |
 
 `update-docs` brings a repository's `./docs` (MkDocs) into agreement with the code. It does both
 halves of the job: fixing what the recent changes made wrong, and sweeping the whole codebase
 against a 30-surface checklist so gaps that were never documented stop being invisible. Every
 run ends with a coverage matrix that gives each surface a status, so "we didn't look there" can't
 hide.
+
+`tvos-swiftui` covers changes to a tvOS SwiftUI target. Roughly a quarter of SwiftUI is
+`@available(tvOS, unavailable)`, so the workflow is built around a `swiftc -typecheck` sweep
+against the tvOS SDK that runs in seconds with no simulator: a change gets proven to compile
+instead of asserted. It then covers the quieter tier, where an API compiles on tvOS and no D-pad
+gesture can ever reach it.
 
 The Claude command namespace remains `claude-skills` for backward compatibility with existing users and headless installs.
 
@@ -47,6 +54,7 @@ Invoke the Claude commands with:
 /claude-skills:pr-review 123
 /claude-skills:pr-triage 123
 /claude-skills:update-docs
+/claude-skills:tvos-swiftui 42
 ```
 
 ### Claude headless / in-cluster install
@@ -78,6 +86,7 @@ Codex invocation examples:
 Use the pr-review skill on PR 123.
 Use the pr-triage skill on PR 123.
 Use the update-docs skill to sync ./docs with the code.
+Use the tvos-swiftui skill on issue 42.
 ```
 
 ## Repository layout
