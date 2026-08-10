@@ -97,7 +97,7 @@ k get pods -A -o json 2>/dev/null | \
   jq -r '.items[] | . as $p | .status.containerStatuses[]? |
     [$p.metadata.namespace, $p.metadata.name, .name, (.restartCount|tostring),
      (.state|keys[0]? // "-"), (.state.waiting.reason? // "-"),
-     (.lastState.terminated.reason? // "-"), (.lastState.terminated.exitCode?|tostring // "-")] |
+     (.lastState.terminated.reason? // "-"), (.lastState.terminated.exitCode? // "-" | tostring)] |
     @tsv' 2>/dev/null | sort -k4 -rn                                > "$OUT/container-restarts.tsv"
 
 # The rendered nodeSelector of every workload. A placement value set in Helm values or a kustomize
