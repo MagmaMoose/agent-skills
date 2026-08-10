@@ -9,8 +9,8 @@
     {
       "name": "claude-skills",
       "source": "./",
-      "description": "Shared PR review, PR triage, documentation sync, and tvOS SwiftUI workflows for Claude Code. The claude-skills name is kept to preserve slash commands.",
-      "version": "0.3.0"
+      "description": "Shared PR review, PR triage, documentation sync, Kubernetes platform audit, and tvOS SwiftUI workflows for Claude Code. The claude-skills name is kept to preserve slash commands.",
+      "version": "0.4.0"
     }
   ]
 }
