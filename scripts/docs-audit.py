@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Audit a MkDocs documentation tree for drift, gaps, and broken structure.
 
-Stdlib-only (Python 3.9+). Used by the shared `update-docs` workflow to do the
+Stdlib-only (Python 3.9+). Used by the shared `docs-update` workflow to do the
 mechanical half of a docs sync, so the agent can spend its attention on the
 half that needs judgement.
 
