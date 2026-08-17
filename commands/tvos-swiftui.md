@@ -12,8 +12,8 @@ Say once, before you start, that the command is deprecated and the new name is
 `/claude-skills:swiftui-build`. Then run the tvOS SwiftUI workflow exactly as the new command
 defines it. Read the first of these that exists and follow it in full:
 
-1. `${CLAUDE_PLUGIN_ROOT}/commands/swiftui-build.md` — installed as a plugin
-2. `.claude/commands/swiftui-build.md` — headless runs (installed into the clone)
+1. `.claude/commands/swiftui-build.md` — headless runs (installed into the clone)
+2. `${CLAUDE_PLUGIN_ROOT}/commands/swiftui-build.md` — installed as a plugin
 3. `commands/swiftui-build.md` — working inside the agent-skills checkout
 
 If none of them exist, go straight to the rubric instead, at the first of

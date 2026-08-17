@@ -12,8 +12,8 @@ Say once, before you start, that the command is deprecated and the new name is
 `/claude-skills:docs-update`. Then run the docs sync workflow exactly as the new command defines
 it. Read the first of these that exists and follow it in full:
 
-1. `${CLAUDE_PLUGIN_ROOT}/commands/docs-update.md` — installed as a plugin
-2. `.claude/commands/docs-update.md` — headless runs (installed into the clone)
+1. `.claude/commands/docs-update.md` — headless runs (installed into the clone)
+2. `${CLAUDE_PLUGIN_ROOT}/commands/docs-update.md` — installed as a plugin
 3. `commands/docs-update.md` — working inside the agent-skills checkout
 
 If none of them exist, go straight to the rubric instead, at the first of
