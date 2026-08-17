@@ -1,7 +1,7 @@
 {
   "name": "agent-skills",
-  "version": "1.3.0",
-  "description": "Shared PR review, PR triage, documentation sync, Kubernetes platform audit, and tvOS SwiftUI workflows for MagmaMoose agents.",
+  "version": "1.4.0",
+  "description": "Shared PR review, PR triage, documentation sync, Kubernetes platform audit, tvOS SwiftUI, and context optimisation workflows for MagmaMoose agents.",
   "author": {
     "name": "Caleb Sargeant",
     "email": "caleb@magmamoose.com",
@@ -22,13 +22,15 @@
     "sre",
     "tvos",
     "swiftui",
+    "context-engineering",
+    "claude-md",
     "automation"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "MagmaMoose Agent Skills",
-    "shortDescription": "Shared PR review, triage, docs sync, Kubernetes audit, and tvOS SwiftUI workflows.",
-    "longDescription": "Shared PR review, PR triage, documentation sync, Kubernetes platform audit, and tvOS SwiftUI workflows for MagmaMoose agents, packaged as reusable Codex skills.",
+    "shortDescription": "Shared PR review, triage, docs sync, Kubernetes audit, tvOS SwiftUI, and context optimisation workflows.",
+    "longDescription": "Shared PR review, PR triage, documentation sync, Kubernetes platform audit, tvOS SwiftUI, and context optimisation workflows for MagmaMoose agents, packaged as reusable Codex skills.",
     "developerName": "MagmaMoose",
     "category": "Productivity",
     "capabilities": [
@@ -39,9 +41,10 @@
     "defaultPrompt": [
       "Use the pr-review skill on PR 123.",
       "Use the pr-triage skill on PR 123.",
-      "Use the update-docs skill to sync ./docs with the code.",
+      "Use the docs-update skill to sync ./docs with the code.",
       "Use the k8s-audit skill to audit the production cluster.",
-      "Use the tvos-swiftui skill on issue 42."
+      "Use the swiftui-build skill on issue 42.",
+      "Use the context-optimise skill to set up the context stack in this repo."
     ]
   }
 }

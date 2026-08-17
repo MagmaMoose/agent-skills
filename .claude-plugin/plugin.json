@@ -1,8 +1,8 @@
 {
   "name": "claude-skills",
   "displayName": "MagmaMoose Agent Skills for Claude",
-  "version": "0.4.0",
-  "description": "Shared PR review, PR triage, documentation sync, Kubernetes platform audit, and tvOS SwiftUI workflows for Claude Code. The claude-skills name is kept to preserve slash commands.",
+  "version": "0.5.0",
+  "description": "Shared PR review, PR triage, documentation sync, Kubernetes platform audit, tvOS SwiftUI, and context optimisation workflows for Claude Code. The claude-skills name is kept to preserve slash commands.",
   "author": {
     "name": "Caleb Sargeant",
     "email": "caleb@magmamoose.com",
@@ -23,6 +23,8 @@
     "sre",
     "tvos",
     "swiftui",
+    "context-engineering",
+    "claude-md",
     "automation"
   ]
 }
