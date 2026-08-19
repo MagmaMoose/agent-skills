@@ -178,7 +178,7 @@ which reads, from the outside, exactly like a job well done.
 ```bash
 gh pr checks <PR>                       # which gates are red
 gh run view <run-id> --log-failed | grep -E 'BLOCKING|net-new'
-gh pr view <PR> --json comments -q '.comments[].body' | grep -A200 'pr-summary'
+gh pr view <PR> --json comments -q '.comments[].body' | grep -A200 'chargate:pr-summary'
 ```
 
 Reconcile the two: every finding in the summary must end up fixed or suppressed, whether
@@ -221,7 +221,7 @@ every thread reads as resolved. In order of preference:
 # 1. The scanner's own summary comment — the complete net-new list
 gh pr view <PR> --json comments -q '.comments[].body' | grep -A200 'chargate:pr-summary'
 # 2. The full SARIF, uploaded as a run artifact
-gh run download <run-id> -n chargate-sarif && jq -r '.runs[].results[]' full.sarif
+gh run download <run-id> -n chargate-sarif && jq -r '.runs[].results[] | .ruleId + ": " + .message.text' full.sarif
 # 3. The job log — the gate line says exactly what is blocking
 gh run view <run-id> --log-failed | grep -E 'BLOCKING|net-new'
 ```
