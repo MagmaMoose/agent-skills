@@ -168,6 +168,23 @@ gh api "repos/$OWNER/$REPO/code-scanning/alerts?ref=refs/heads/$HEAD&state=open"
   2>/dev/null || echo "no code-scanning access / none open"
 ```
 
+**d2) FAILING CHECKS — findings that never got a thread.**
+Do not treat the threads as the complete list. Inline review comments are capped (GitHub
+502s past roughly 40, and scanners self-limit), so a scanner with 44 findings may open a
+dozen threads and report the rest only in its summary comment and its SARIF artifact.
+Triaging threads alone therefore ends with every thread resolved and the gate still red —
+which reads, from the outside, exactly like a job well done.
+
+```bash
+gh pr checks <PR>                       # which gates are red
+gh run view <run-id> --log-failed | grep -E 'BLOCKING|net-new'
+gh pr view <PR> --json comments -q '.comments[].body' | grep -A200 'pr-summary'
+```
+
+Reconcile the two: every finding in the summary must end up fixed or suppressed, whether
+or not it ever had a thread. See §2a for how, and for why the usual suppression attempts
+fail silently.
+
 **e) Dependabot / secret-scanning alerts** — only if the feedback references them;
 otherwise skip. (`gh api repos/$OWNER/$REPO/dependabot/alerts`.)
 
@@ -188,47 +205,100 @@ Skip a thread (do **not** fix/resolve it) when:
 For anything you skip that a human might expect to be handled, note it in your final
 summary with a one-line reason — don't silently drop it.
 
-### 2a. Security scanner false positives — suppress, don't just explain
+### 2a. Security scanner findings — get the gate green, and verify that you did
 
-When a security scanner (Chargate, KICS, CodeQL, Semgrep, Trunk, etc.) flags a
-finding that is a false positive AND the scanner's check is a required CI gate,
-**explaining "false positive" in a reply is not enough** — the check will still
-fail and block merge. You MUST make the scanner pass:
+A scanner finding that is a required CI gate is not handled by replying "false
+positive". The check stays red and the PR stays blocked. You must either FIX it or
+SUPPRESS it in a form the scanner actually honours — and then prove the count went
+down, because **every common failure here is silent**.
 
-1. **Find the scanner's suppression syntax.** Common patterns:
-   - `# kics-scan disable=<rule-id>` (KICS / Checkov) — **must be at file
-     line 1, column 0**; KICS silently ignores inline and indented
-     suppression comments. Do NOT add a `---` YAML document separator
-     between the suppression and content — KICS may interpret `---` as
-     document start and skip the preceding comments. Content must start
-     immediately after the suppression line(s).
-   - `# kics-ignore` (KICS) — simpler inline suppression that may work
-     where `disable=` doesn't. Place on the same line as the finding:
-     `- secretKey: FOO  # kics-ignore (reason)`.
-   - `// nosemgrep: <rule-id>` (Semgrep)
-   - `# nosec` (Bandit)
-   - Inline `# trunk-ignore(<linter>/<rule>)` (Trunk)
-   - Check the target repo for existing suppressions: grep for `disable=`,
-     `nosem`, `nosec`, `suppress`. **Inspect a working example to verify
-     placement** — a suppression in the wrong position will be silently
-     ignored and the check will fail again.
+**First: get the authoritative list, not the threads.**
+Inline review comments are capped (GitHub 502s past ~40, and scanners self-limit), so
+the threads are a SUBSET. Triaging only what has a thread leaves the gate red while
+every thread reads as resolved. In order of preference:
 
-2. **Add the suppression using the exact placement the scanner recognizes.**
-   Copy the placement from a working suppression in the same repo. If no
-   examples exist, try file-top first (line 1, column 0) for KICS/Checkov.
-   **If the first attempt fails** (CI still red): try alternative formats
-   (e.g. combine `# kics-scan disable=` at file-top with `# kics-ignore`
-   inline on the flagged line). Multiple suppression formats are harmless
-   together.
+```bash
+# 1. The scanner's own summary comment — the complete net-new list
+gh pr view <PR> --json comments -q '.comments[].body' | grep -A200 'chargate:pr-summary'
+# 2. The full SARIF, uploaded as a run artifact
+gh run download <run-id> -n chargate-sarif && jq -r '.runs[].results[]' full.sarif
+# 3. The job log — the gate line says exactly what is blocking
+gh run view <run-id> --log-failed | grep -E 'BLOCKING|net-new'
+```
 
-3. **Commit and push** — the CI check will re-run against your commit. Verify
-   it turns green before replying to the thread. **If it doesn't turn green,
-   the suppression placement or format is wrong** — do not reply and resolve
-   yet. Try a different combination and push again. Never reply "false
-   positive" and resolve while CI is still red.
+**Know what the gate counts.** Chargate blocks on **net-new** only:
+`BLOCKING 44 net-new finding(s) (fail_on=any)` alongside `1982 pre-existing, never
+blocking` and `30 suppressed (accepted in-source, never blocking)`. So the target is
+net-new → 0, reachable by fixing or by an accepted in-source suppression. Pre-existing
+findings are NOT yours to clear in a feature PR.
 
-4. **Then** reply to the thread referencing the suppression commit SHA, and
-   resolve it.
+**The rule ID tells you which scanner owns it — and only that scanner's syntax works.**
+Chargate runs several scanners at once, and a suppression aimed at the wrong one is a
+no-op that looks exactly like a fix:
+
+| Rule ID looks like | Scanner | Suppression | Placement |
+| --- | --- | --- | --- |
+| `CKV_AWS_28`, `CKV2_AWS_16` | Checkov | `#checkov:skip=<id>:<reason>` | **INSIDE** the resource block |
+| `AVD-AWS-0089`, `AWS-0089` | Trivy | `#trivy:ignore:<id>` | line above the resource |
+| a UUID (`baee238e-…`) | KICS | `# kics-scan disable=<uuid>` | **file line 1, column 0** |
+| dotted path (`terraform.aws.security.…`) | Semgrep | `# nosemgrep: <id>` | on or above the flagged line |
+| `CKV_*` in a `kics-scan` line | — | **NOTHING. KICS does not know Checkov IDs.** | — |
+
+That last row is a real defect found in the wild: a commit added
+`# kics-scan disable=CKV_AWS_273,CKV_AWS_40` to suppress two Checkov rules. KICS ignored
+the unknown IDs, Checkov never saw a skip, and both rules kept blocking — while the diff
+read as though the finding had been handled.
+
+**Placement is the second silent failure.** In the same repo, 42 correctly-formed
+`#checkov:skip=` comments sat immediately ABOVE their `resource` blocks instead of inside
+them. Checkov honours a skip only within the block it applies to, so all 42 were inert and
+every rule still fired. Copy placement from a suppression you have CONFIRMED works — not
+from one that merely exists.
+
+**NEVER SUPPRESS A FINDING THAT IS REAL.** This is the one rule in this section that is
+not a preference. Suppression records a judgement that the control does not apply *here*;
+using it to quieten a scanner that has correctly spotted a weakness ships that weakness
+with a comment asserting it is fine, and the next person reads the comment instead of the
+code. A green gate bought that way is worse than a red one, because the red one was still
+telling the truth.
+
+Decide per finding, in this order, and never skip to 3:
+
+1. **Fix it** if the control applies and the fix is available. Many cost nothing and are
+   straightforwardly right: SQS SSE (`sqs_managed_sse_enabled = true`), SNS encryption with
+   the AWS-managed key, S3 `abort_incomplete_multipart_upload`, a log retention period.
+   Default here. If you can fix it, fixing it is the answer.
+2. **Suppress** only when the control genuinely does not apply to this design, or when the
+   only fix costs real money on an account where that matters. "Lambda must be in a VPC"
+   does not apply to a function whose entire job is receiving public webhooks. A KMS CMK,
+   cross-region replication, PITR or a NAT gateway all carry a real bill — on a
+   personally-funded account that is a legitimate reason, *stated as the reason*.
+3. **Leave it red** when the finding is real and you cannot fix it within the scope of this
+   PR. Do not suppress it to finish the job. Say so in the summary, name the finding and
+   what fixing it would take, and let a human decide. An honest red gate is a correct
+   outcome of triage; a suppressed real finding is a defect you introduced.
+
+If you cannot tell which of the three applies — the finding is real but you are unsure the
+control fits the architecture — treat it as 3 and escalate. Uncertainty is not a licence to
+suppress.
+
+Write the reason for a human reading it in a year: what the resource is, why the control
+does not apply, and — if cost is the reason — say cost. `#checkov:skip=CKV_AWS_28:PITR off
+deliberately — every row is a 24h-TTL delivery id, nothing worth restoring` is a good
+reason: it names the data and why losing it is acceptable. "false positive" is not a
+reason; it is a label, and usually an untested one.
+
+**Verify against the scanner, never by eye.** This is the whole point of the section: a
+misplaced or misaddressed suppression produces no error, no warning, and no diff you can
+spot. After pushing, re-read the gate line and confirm the net-new count actually dropped:
+
+```bash
+gh pr checks <PR> --watch
+gh run view <run-id> --log-failed | grep -E 'BLOCKING|net-new by severity'
+```
+
+If the count did not move, the suppression is not being honoured — change the form or the
+placement and push again. Do not reply and resolve while the gate is still red.
 
 Never dismiss a security alert through the API (`PATCH … state=dismissed`) —
 dismissal is a human judgment call. Always fix or suppress inline.
@@ -373,6 +443,15 @@ State whether the branch had merge conflicts and how you resolved them, and **fl
 judgment calls** (ambiguous comments you interpreted, conflict resolutions you chose,
 hooks you had to bypass) so a human can review them — these are flags, not questions.
 End by confirming the PR is **ready to merge**: commits pushed, branch up to date with
-base, threads resolved, `mergeable=MERGEABLE`. State the one remaining human action
+base, threads resolved, `mergeable=MERGEABLE`, **and every required check green**. If a
+scanner gate was red when you started, quote its final count — `net-new 0` — rather than
+asserting you handled it. "All threads resolved" is not the same claim as "the gate is
+green", and on a capped scanner they routinely disagree.
+
+For any scanner finding you SUPPRESSED, list it: rule id, file, and the one-line reason.
+A human should be able to audit every suppression from your summary without opening the
+diff. For any finding you left RED because it is real and out of scope, say that plainly
+and first — it is the most important thing in the report, and burying it is how a real
+weakness gets merged behind a tidy-looking summary. State the one remaining human action
 ("review and merge"). Only call out a push/merge-state problem if the remote rejected
 it or CI is red for a reason you couldn't fix, with the exact error.

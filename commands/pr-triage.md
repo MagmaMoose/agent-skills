@@ -1,5 +1,5 @@
 ---
-description: Read every PR comment (GHAS, Copilot, code-quality, human), fix the code, reply, and resolve each thread
+description: Read every PR comment AND every failing security gate (GHAS, Chargate, Copilot, code-quality, human), fix or correctly suppress each finding, reply, resolve the threads, and leave the required checks green
 argument-hint: "[PR number or URL - defaults to the PR for the current branch]"
 allowed-tools: Bash(gh:*), Bash(git:*), Read, Edit, Write, Grep, Glob
 ---
