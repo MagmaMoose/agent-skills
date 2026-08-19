@@ -25,12 +25,7 @@ on:
   pull_request:
   push:
     branches: [main]
-    paths-ignore:
-      - '**/*.md'
-      - docs/**
-      - mkdocs.yml
-      - LICENSE
-      - .gitignore
+    paths-ignore: ['docs/**', 'mkdocs.yml', 'LICENSE', '.gitignore', 'README.md', 'CHANGELOG.md']
   workflow_dispatch:
 
 permissions:
