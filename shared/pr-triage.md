@@ -122,12 +122,20 @@ Pull all of these — bots and humans land in different places:
 This is the primary source and the only one that carries thread IDs + resolution
 state, which you need to resolve later. Use GraphQL:
 
+**PAGINATE, AND CHECK THE COUNT.** `reviewThreads(first:100)` silently returns the first
+100 and drops the rest — and the ones it drops are the NEWEST, which on a PR that has just
+been re-scanned are exactly the threads a scanner posted seconds ago. This is not
+theoretical: on a 101-thread PR the unpaginated query reported "100 threads, 0 unresolved"
+while two findings sat open. Nothing errors; you simply get a shorter list.
+
 ```bash
-gh api graphql -f query='
-query($owner:String!, $repo:String!, $pr:Int!) {
+gh api graphql --paginate -f query='
+query($owner:String!, $repo:String!, $pr:Int!, $endCursor:String) {
   repository(owner:$owner, name:$repo) {
     pullRequest(number:$pr) {
-      reviewThreads(first:100) {
+      reviewThreads(first:100, after:$endCursor) {
+        totalCount
+        pageInfo { hasNextPage endCursor }
         nodes {
           id
           isResolved
@@ -142,7 +150,17 @@ query($owner:String!, $repo:String!, $pr:Int!) {
       }
     }
   }
-}' -f owner="$OWNER" -f repo="$REPO" -F pr="$PR"
+}' -f owner="$OWNER" -f repo="$REPO" -F pr="$PR" > /tmp/threads.json
+```
+
+Then assert you actually got them all, because a truncated read is indistinguishable from a
+tidy PR:
+
+```bash
+jq -s '{fetched: ([.[].data.repository.pullRequest.reviewThreads.nodes[]]|length),
+        total:   (.[0].data.repository.pullRequest.reviewThreads.totalCount)}' /tmp/threads.json
+# fetched MUST equal total. If it does not, stop and fix the query — do not triage a subset
+# and report it as the whole.
 ```
 
 **b) PR-level review summaries** (a reviewer's overall verdict + body):
@@ -447,6 +465,13 @@ base, threads resolved, `mergeable=MERGEABLE`, **and every required check green*
 scanner gate was red when you started, quote its final count — `net-new 0` — rather than
 asserting you handled it. "All threads resolved" is not the same claim as "the gate is
 green", and on a capped scanner they routinely disagree.
+
+**A GREEN-LOOKING RUN CAN END WITH NEW THREADS BEHIND IT.** Pushing a fix makes the scanner
+re-run, and it posts its findings against YOUR commit — after your last read of the threads.
+On MagmaMoose/infra#638 the final triage commit landed at 12:45:34 and two fresh Chargate
+threads appeared at 12:49:09. Nothing was skipped; they did not exist yet. So before
+reporting, re-read the threads once the gate has finished, and treat anything new as this
+run's work rather than the next one's.
 
 For any scanner finding you SUPPRESSED, list it: rule id, file, and the one-line reason.
 A human should be able to audit every suppression from your summary without opening the
