@@ -937,7 +937,7 @@ carries no `… and N more` line. That line appears only above 20 — see below.
 Two consequences of that cap. The count in the table is the truth and the listing is a sample,
 so when `… and N more` is present, say the listing was truncated instead of writing as though
 you reviewed all of them. And an entry with no line number can't be verified at `head_sha` and
-can't be deduped by line, so don't promote it until you've found the site yourself (§8.1).
+can't be deduped by line, so don't promote it until you've found the site yourself (§8, step 1).
 
 **Only one of those four lines means zero**, and it's the last one. The other three all sit
 above a `Net-new findings` count that can read 14, and each is a different way of saying nobody
@@ -1022,7 +1022,7 @@ two:
 3. **Noise here.** Style, line length, an idiom this repo has already decided against, a rule
    it suppresses elsewhere in the tree. Drop it, count it, don't narrate it.
 
-The bar for bucket 1 is the bar the whole rubric uses: **you can name the failure** in §8.4's
+The bar for bucket 1 is the bar the whole rubric uses: **you can name the failure** in §8, step 4's
 shape, *this input or state produces this wrong outcome*. A finding you can only restate as the
 linter's own message is one you're copying, not judging. Leave it in bucket 3 and let the count
 speak for it.
