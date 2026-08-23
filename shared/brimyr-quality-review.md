@@ -258,7 +258,7 @@ gh api "repos/$OWNER/$REPO/pulls/$PR/files" --paginate -q '.[].filename' \
       git show "$HEAD_SHA:$f" | awk -v f="$f" '
         function flush() { if (name != "" && body !~ /assert|raises/) print f ": " name; name=""; body="" }
         /^[ \t]*(async )?def test_/ { flush(); name=$0; ind=match($0, /[^ \t]/); next }
-        name != "" && /[^ \t]/ && match($0, /[^ \t]/) <= ind { flush() }
+        name != "" && !/^[ \t]*)/ && /[^ \t]/ && match($0, /[^ \t]/) <= ind { flush() }
         name != "" { body = body $0 "\n" }
         END { flush() }'
     done
@@ -834,7 +834,8 @@ restating them is a duplicate. Read them from whichever of these the environment
 git show "$HEAD_SHA:sonar-project.properties" 2>/dev/null | grep -E 'projectKey|organization'
 
 # the PR's issues, when SONAR_HOST_URL / SONAR_TOKEN are in the environment
-curl -sS -u "$SONAR_TOKEN:" \
+curl -sS \
+  -u "$SONAR_TOKEN:" `# gitleaks:allow — env var reference, not a literal secret` \
   "$SONAR_HOST_URL/api/issues/search?componentKeys=<projectKey>&pullRequest=$PR&resolved=false" \
   | jq -r '.issues[] | "\(.component):\(.line) [\(.severity)] \(.rule) \(.message)"'
 
