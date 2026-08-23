@@ -177,6 +177,122 @@ gh api "repos/$OWNER/$REPO/issues/$PR/comments" --paginate \
   -q '.[] | {user: .user.login, body}'
 ```
 
+**c2) THE AGENTIC POST-GATE REVIEWS — findings the thread query cannot see.**
+`chargate-security-review` and `brimyr-quality-review` run after their gate finishes and
+post what the gate did *not* catch. Each posts a **PR issue comment** carrying a hidden
+marker of its own:
+
+| Marker | Posted by | Where it lands |
+| --- | --- | --- |
+| `<!-- agent-skills:chargate-security-review -->` | the security review that runs after Chargate | its own comment, opening on and linking to Chargate's `<!-- chargate:pr-summary -->` comment |
+| `<!-- agent-skills:brimyr-quality-review -->` | the quality review that runs after Brimyr | beside the Brimyr gate comment, or standalone — Brimyr does not always post one |
+
+Find them by marker and keep the comment **`id`**; you need it to answer in §2b:
+
+```bash
+gh api "repos/$OWNER/$REPO/issues/$PR/comments" --paginate \
+  -q '.[] | select(.body | test("<!-- agent-skills:(chargate-security-review|brimyr-quality-review) -->"))
+      | {id, review: (.body | capture("<!-- agent-skills:(?<r>[a-z-]+) -->").r), url: .html_url, body}'
+```
+
+**THESE ARE NOT REVIEW THREADS, AND (a) WILL NEVER RETURN THEM.** `reviewThreads` returns
+pull-request *review* threads. An issue comment is not a node in that connection: it has no
+thread `id`, no `isResolved`, and no `path`/`line`. So the `fetched == total` assertion above
+still passes cleanly — it was never counting these — and a triage run that walks only review
+threads skips **every** finding these two skills produce, silently, with a full set of
+resolved threads and a green-looking summary to show for it. That is the whole trap: the
+subset you read and the subset you were told about are both internally consistent.
+
+Source (c) does fetch these comments — it fetches every issue comment — but it does not
+distinguish them, and their findings live in an HTML comment rather than in the prose (c)
+skims. Pull them by marker, deliberately.
+
+**Read the machine-readable block, not the prose.** Both reviews append their findings to that
+same comment as JSON **inside an HTML comment**, so it never renders and never has to be parsed
+back out of English:
+
+```
+<!-- agent-skills:findings:v1
+{
+  "schema_version": 1,
+  "skill": "chargate-security-review",
+  "gate": "chargate",
+  "head_sha": "9f148e8b…",
+  "gate_comment_id": 1234567890,
+  "verdict": "blocking",
+  "duplicates_dropped": 2,
+  "findings": [
+    {
+      "id": "csr-1",
+      "severity": "critical",
+      "blocks": true,
+      "class": "authorization",
+      "path": "apps/api/server/routes/items.py",
+      "line": 42,
+      "title": "Item lookup has no tenant predicate",
+      "attack": "Any authenticated user can read another org's item by id.",
+      "fix": "Add `.where(Item.org_id == current_user.org_id)` to the select.",
+      "confidence": "confirmed",
+      "pre_existing": false
+    }
+  ]
+}
+-->
+```
+
+Read it with the same pipeline the review validates it with before posting — the two delimiter
+lines are the `agent-skills:findings:v1` opener and the closing `-->`, and `sed '1d;$d'` drops
+them:
+
+```bash
+gh api "repos/$OWNER/$REPO/issues/comments/$COMMENT_ID" -q .body \
+  | sed -n '/<!-- agent-skills:findings:v1/,/^-->/p' | sed '1d;$d' \
+  | jq -r '.findings[] | [.id, .severity, (.blocks|tostring), (.confidence // "-"),
+                          .path + ":" + (.line|tostring), .title] | @tsv'
+```
+
+These fields decide how the finding gets handled, and §2b turns each one into an instruction:
+
+| Field | What it changes |
+| --- | --- |
+| `id` | `csr-<n>` from the security review, `bqr-<n>` from the quality review. Stable across re-runs for the same defect, so it is what you cite when you answer — never renumber it. |
+| `blocks` | The review's judgement that this should stop the merge. It is a claim about the code, **not** a CI state. |
+| `confidence` | `confirmed` = traced end to end. `probable` = one link in the chain is unverified — the review is telling you exactly which step to check first. |
+| `auto_fixable` | **Quality review only, and it is addressed to you.** `true` = the fix is mechanical and local (move a dependency between groups, add the missing assertion, seed the RNG). `false` = it needs a design decision, so you leave it for the author rather than guessing at intent. Absent on security findings; treat a missing `auto_fixable` as unset, not as `false`, and decide it on the merits per §2b. |
+| `test_must_assert` | Quality review only. The assertion a new or fixed test has to make. When you fix a test finding, this is the contract to satisfy — a test that goes green without asserting it has not fixed anything. `null` when the finding isn't test-shaped. |
+| `pre_existing` | `true` means the finding sits on code this PR did not introduce, so §2a's pre-existing rule applies: decide the scope before you widen the diff. |
+| `duplicates_dropped` | How many candidate findings the review discarded because its gate already reported them. Non-zero is the additive design working, not findings going missing. |
+| `head_sha` | The commit the review actually read. See the staleness check below — this one is a precondition, not a detail. |
+| `gate_comment_id` / `gate_source` | Where the review got the gate's own result. `gate_comment_id: null` with `gate_source: "none"` means **the gate posted no comment and the review said so honestly** — Brimyr on `main` does not post one. That is a degraded-but-valid review, not a failure, and the coverage numbers beside it will be `null` rather than guessed. Carry that distinction into the §6 report; do not report it as a broken review. |
+
+**Check `head_sha` before you act on a single line number.** There is exactly one of these
+comments per review per PR, forever, PATCHed in place — so the comment you just read is not
+necessarily about the code you have checked out. If the author pushed after the review ran,
+the block still carries the *old* `head_sha`, and every `path:line` in it points into a commit
+that is no longer HEAD. Acting on it edits whatever now happens to sit at that line number:
+
+```bash
+BLOCK_SHA=$(… | jq -r '.head_sha')          # from the extraction above
+HEAD_SHA=$(gh pr view "$PR" --json headRefOid -q .headRefOid)
+[ "$BLOCK_SHA" = "$HEAD_SHA" ] && echo "current" || echo "STALE: reviewed $BLOCK_SHA, head is $HEAD_SHA"
+```
+
+When it is stale, do **not** discard the findings and do not trust their line numbers. Re-locate
+each one by reading the code the `title` and `path` describe, exactly as §2b step 1 requires
+anyway, and say in the report that you matched them against a newer commit than the review
+read. A finding whose code the later push already fixed is `fixed` in the ledger — say by which
+commit — not silently dropped. If the review is still running against the new push, its next
+PATCH will supersede what you read; note that too rather than racing it.
+
+`"findings": []` is a real answer — *reviewed, nothing to add* — and it is a different claim
+from a missing block. If the comment is present but the block is absent or `jq` cannot parse
+it, treat it as malformed: read the prose instead and say in the report that the block did not
+parse. **Never read a parse failure as a clean review.**
+
+If a marker appears on more than one comment, the **last** one is live and the earlier is a
+stray from a run that failed to PATCH. Answer the last, and note the stray in the report.
+
+
 **d) GitHub Advanced Security — code scanning alerts on this PR's branch**
 (GHAS / CodeQL findings; ignore 403/404 if GHAS isn't enabled):
 
@@ -207,7 +323,9 @@ fail silently.
 otherwise skip. (`gh api repos/$OWNER/$REPO/dependabot/alerts`.)
 
 Build a single triage list. For each item record: source, file:line, what it's
-asking for, and — for review threads — the **thread `id`** and `isResolved`.
+asking for, and — for review threads — the **thread `id`** and `isResolved`. For an agentic
+finding from (c2) there is no thread, so record the **comment `id`** and the **finding `id`**
+instead: those two are what you cite when you answer it.
 
 ---
 
@@ -320,6 +438,162 @@ placement and push again. Do not reply and resolve while the gate is still red.
 
 Never dismiss a security alert through the API (`PATCH … state=dismissed`) —
 dismissal is a human judgment call. Always fix or suppress inline.
+
+### 2b. Agentic post-gate findings — reasoned, not matched
+
+The findings from `chargate-security-review` and `brimyr-quality-review` (source c2) are a
+different kind of object from everything in 2a, and the difference decides how you handle
+them. A scanner finding is **a pattern that matched**: it has a rule id, a scanner that owns
+it, a suppression syntax that scanner honours, and a re-run that proves the count moved. An
+agentic finding is **a claim somebody reasoned to**. There is no rule id, nothing to suppress,
+and no scanner to re-run for confirmation. The only confirmation that exists is you, reading
+the code the finding names and deciding whether the failure it describes is real.
+
+**So the verification burden goes UP, not down.** A scanner is dumb but honest: it matched or
+it did not, and when it is wrong it is wrong in a shape you learn to recognise. A reasoned
+finding can be **confidently, fluently wrong** — right about the file, right about the
+function, wrong about the one caller that already makes it safe — and it reads exactly like
+the correct findings sitting next to it. Fluency is not evidence. Treat each one as a
+hypothesis with a named failure, and reproduce the reasoning before you change a line:
+
+1. Open the `file:line` it names and read the surrounding code — the code, not the snippet
+   quoted in the comment.
+2. State the failure concretely to yourself: which input, which path, which state, and what
+   goes wrong at the end of it. If you cannot fill those in, you have not reproduced it yet
+   and you are about to edit code on someone else's confidence.
+3. Look for the thing that would defeat it — the guard upstream, the type that cannot hold
+   that value, the caller that already validated. This is the step that catches a confidently
+   wrong finding, and it is the step that gets skipped. When `confidence` is `probable` the
+   review has already named the link it could not verify: start there, because that is where
+   it will be wrong if it is wrong.
+
+Then decide, in this order, and never skip to 3:
+
+1. **Fix it** when the reasoning holds. Minimal and correct per §3, same as any other item.
+   Default here, exactly as in 2a. This is the half of the job the reviews are handing you:
+   they find, you fix. Where the finding carries `auto_fixable: true`, the review has already
+   judged the fix mechanical and local, and `test_must_assert` names the assertion the result
+   has to make — satisfy that, not merely the test runner. `auto_fixable: false` is the review
+   saying the fix needs a design decision it did not want to make for you: that one becomes
+   `open` in the ledger with the decision spelled out, **not** a rejection and not a guess.
+   The flag narrows *how* you fix, never *whether* the finding is real — a `false` on a
+   `blocks: true` finding still leaves a blocking finding on the PR.
+2. **Reject it in writing** when the reasoning does not hold — and name **the step that
+   fails**, not the conclusion. "Not exploitable" is not a rejection, it is a label;
+   "`handler()` is only reachable from `dispatch()`, which rejects any payload without a
+   verified signature at line 44" is a rejection, because it can be checked and it can be
+   proved wrong. You are making a claim about the code, so write it to survive someone who
+   disagrees reading it.
+3. **Leave it open** when you cannot tell. Say what you could not determine and what would
+   settle it. Uncertainty is not a licence to close a finding, exactly as it is not a licence
+   to suppress one.
+
+**NEVER CLOSE A REAL FINDING TO MAKE A GATE GREEN.** The rule from 2a carries over unchanged,
+and here it is *easier* to break: suppressing a scanner finding at least leaves a comment in
+the diff with a rule id on it, which a human can grep for and audit later. Talking down an
+agentic finding leaves **no artefact at all** — no line in the diff, no id, nothing to search
+for, just a paragraph of confident prose in a comment. The written rejection is the
+entire audit trail. That is why it has to name the step that fails.
+
+**Do not make a change whose only purpose is to close the finding.** A defensive `if` added
+around code that was already correct, a `# type: ignore`, a test loosened until it passes —
+these end the conversation without ending the disagreement, and they are worse than the
+rejection you did not write, because now the code carries a scar that implies a bug was
+there. If the finding is wrong, say it is wrong. Pushing back in the comment is a valid and
+expected outcome of this section; a cosmetic edit is not.
+
+**`blocks` is a judgement, not a check.** `blocks: true` in the findings block records the
+reviewing skill's view that the finding should stop the merge. It is a claim about the code,
+not a CI state — read `gh pr checks` (§2a) for what is actually red. The two point opposite
+ways more often than you would expect: a `blocks: true` finding on a fully green PR is the
+**normal** case, because these reviews exist precisely to report what the gate could not see.
+**A green gate is not an argument against the finding.** The envelope's `verdict` says the same
+thing at comment level; neither field turns a check red by itself, and neither is negotiable
+because a check is green.
+
+**A duplicate is one finding, not two.** Both reviews are additive by construction — they drop
+anything their gate already reported, and say how many in `duplicates_dropped`. If you
+nonetheless see the same defect from both the gate and the review, it is one defect. Fix it
+once, answer it in both places (the scanner's thread or gate line, and the review comment),
+and count it once in the report — do not fix it twice, and do not let the second copy read as
+an unhandled finding.
+
+**Answer the review's comment — never edit the gate's.** `<!-- chargate:pr-summary -->`
+belongs to Chargate, which finds that comment by that marker and PATCHes it on every
+subsequent run. Anything you write into it survives until the next scan and then vanishes
+without trace, including your rejection of a finding, which is the one thing a human comes
+looking for later. Write only into the `agent-skills:` marker'd comment, or into a new
+comment of your own. The block's `gate_comment_id` is there so you can link the gate comment,
+not so you can write into it.
+
+**How to answer — there is no thread here to resolve.** Nothing in (c2) has a GraphQL thread
+`id`, so §4's `addPullRequestReviewThreadReply` and `resolveReviewThread` do not apply to it.
+Answer by **PATCHing the same marker'd comment** you found in c2: read its body, append a
+response section, write the whole thing to a file, and send the file. Keep **both** blocks
+byte-for-byte intact, for two different reasons: the skill marker is how the review finds this
+comment on its next run, so mangling it buys a duplicate comment instead of an updated one;
+and the `agent-skills:findings:v1` block is how the *next* triage run reads the findings, so
+mangling that buys a run that sees a malformed block and, per the rule above, has to treat it
+as unread. Your ledger goes between the prose and the findings block, leaving that block last
+where both the review and the next triage run expect to find it. Rewrite neither.
+
+```bash
+COMMENT_ID=…    # from c2
+gh api "repos/$OWNER/$REPO/issues/comments/$COMMENT_ID" -q .body > .git/answered-body.md
+# append your ledger below the prose, above the findings block, then:
+gh api --method PATCH "repos/$OWNER/$REPO/issues/comments/$COMMENT_ID" \
+  -F body=@.git/answered-body.md -q '"updated " + .html_url'
+```
+
+`-F body=@<path>` sends the file's contents as the field value, so Markdown, code fences and
+the JSON block all survive without hand-escaping — the same reason the reviews post that way.
+
+If the token cannot PATCH a comment it does not own (403 — likely whenever the review posted
+as a different identity from the one triaging), post your own comment instead, linking back to
+the original by its `html_url` and citing the same finding ids. **That fallback comment is
+itself idempotent**, by the same rule the reviews follow: give it the marker
+`<!-- agent-skills:triage-answer -->`, and on every later run find that comment and PATCH it
+rather than posting again. Without the marker a PR that gets triaged three times collects
+three answer comments, each one a stale copy of the last:
+
+```bash
+# .git/answer.md must contain the line <!-- agent-skills:triage-answer --> ; then:
+PRIOR=$(gh api "repos/$OWNER/$REPO/issues/$PR/comments" --paginate --slurp \
+  | jq -r '(add | map(select(.body | contains("<!-- agent-skills:triage-answer -->"))) | last) // empty | .id')
+
+if [ -n "$PRIOR" ]; then
+  gh api --method PATCH "repos/$OWNER/$REPO/issues/comments/$PRIOR" \
+    -F body=@.git/answer.md -q '"updated " + .html_url'
+else
+  gh api --method POST "repos/$OWNER/$REPO/issues/$PR/comments" \
+    -F body=@.git/answer.md -q '"posted " + .html_url'
+fi
+```
+
+One comment per PR either way — find, then PATCH, else POST. Never a second comment in one
+run, and never a fresh comment on a re-run.
+
+Either way the answer is a per-finding ledger, and **every finding id appears in it**:
+
+| Finding | Action | Detail |
+| --- | --- | --- |
+| `csr-1` | fixed | `4f2a91c` — tenant predicate added to the select |
+| `csr-2` | rejected | unreachable: `dispatch()` verifies the signature at line 44 before any call |
+| `csr-3` | open | needs the retry semantics decided; flagged in the summary |
+
+Nothing is left unanswered. A finding you neither fixed nor rejected is `open` — said out
+loud, in the ledger, and again in the final report under §6 next to anything you left red.
+Silence on a finding is indistinguishable from having missed it.
+
+**A ledger written into the review's comment is not durable.** The review PATCHes that body
+whole on its next run, so your ledger goes with it — and the entries it erases are precisely
+the ones with no other trace: a `rejected` finding leaves nothing in the diff to grep for
+(that is the §2b point about the written rejection being the entire audit trail), and an
+`open` one leaves nothing at all. So whenever the ledger contains a `rejected` or an `open`
+entry, also write it to your own `<!-- agent-skills:triage-answer -->` comment, by the
+find-then-PATCH-else-POST block above — the same one comment, patched, not a second per run.
+Nobody else rewrites that comment, so it survives the next review run. The §6 report remains
+the copy of record; this is what a human finds on the PR six weeks later.
 
 If a comment is **ambiguous or opinionated**, do not ask — make the most reasonable
 interpretation, implement it, and state the assumption you made in the in-thread reply
@@ -449,8 +723,26 @@ make sure the PR is in that state:
    it. If CI is required and you can see it failing on your commits, **fix the failure**
    (same fix-don't-bypass discipline) and push again; don't leave a red PR.
 
-Only stop when the branch is synced, pushed, every actionable thread is resolved, and
-the PR is mergeable. Then report.
+4. **Confirm every agentic finding from (c2) is answered.** These do not appear in
+   `mergeable`, in `reviewDecision`, or in any check — a `blocks: true` security finding sits
+   on a fully green PR by design (§2b), so steps 1-3 above can all pass with one wide open.
+   Re-read the findings blocks and check every `id` against your ledger:
+
+   ```bash
+   # per review comment id from c2:
+   gh api "repos/$OWNER/$REPO/issues/comments/$COMMENT_ID" -q .body \
+     | sed -n '/<!-- agent-skills:findings:v1/,/^-->/p' | sed '1d;$d' \
+     | jq -r '[.findings[] | select(.blocks)] | "blocking=\(length) ids=\([.[].id]|join(","))"'
+   ```
+
+   Every id it prints must be `fixed` or `rejected` in the ledger. **If any is still `open`,
+   the PR is not ready to merge** — whatever `mergeStateStatus` says. Do not report it as
+   ready. Say plainly that a blocking finding is unresolved, name it, and put it first in the
+   §6 report per the rule about never burying a real weakness behind a tidy summary.
+
+Only stop when the branch is synced, pushed, every actionable thread is resolved, every
+blocking agentic finding is fixed or rejected in writing, and the PR is mergeable. Then
+report.
 
 ---
 
@@ -472,6 +764,20 @@ On MagmaMoose/infra#638 the final triage commit landed at 12:45:34 and two fresh
 threads appeared at 12:49:09. Nothing was skipped; they did not exist yet. So before
 reporting, re-read the threads once the gate has finished, and treat anything new as this
 run's work rather than the next one's.
+
+**The post-gate reviews re-run too — and they leave no new comment to notice.** Your push
+restarts Chargate and Brimyr, and the two reviews follow them, but a review does not post a
+second comment: it PATCHes the one it already owns (§c2). So a fresh, higher-severity finding
+against *your* fix lands by silently rewriting a comment you have already read and ticked off.
+Nothing appears in the thread list, the comment count does not change, and a re-read of
+threads alone will not surface it. Re-fetch both findings blocks by marker after the reviews
+have finished, and compare the `id` set and `head_sha` against what you answered. New ids, or
+the same ids at a `head_sha` matching your commits, are this run's work.
+
+For any agentic finding you REJECTED, list it in the report with its `id` and the step of the
+reasoning that fails — the same sentence you put in the ledger. That rejection is the only
+audit trail that exists for it (§2b), and unlike a suppression it leaves nothing in the diff,
+so a reader who cannot see it in your summary cannot find it at all.
 
 For any scanner finding you SUPPRESSED, list it: rule id, file, and the one-line reason.
 A human should be able to audit every suppression from your summary without opening the

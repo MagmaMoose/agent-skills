@@ -2,7 +2,7 @@
 
 Shared agent workflows for the MagmaMoose stack, packaged for Claude Code and Codex.
 
-This repository keeps one source of truth for PR review, PR triage, documentation sync, Kubernetes platform audit, tvOS SwiftUI, and context optimisation work. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
+This repository keeps one source of truth for PR review, PR triage, post-gate security and quality review, documentation sync, Kubernetes platform audit, tvOS SwiftUI, and context optimisation work. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
 
 Do not fork these workflows per project. Put project-specific rules in the target repository's `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, or relevant `README.md` files. The adapters instruct agents to read those files before acting and to treat explicit hard rules as blockers.
 
@@ -14,10 +14,25 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | --- | --- | --- |
 | PR review | `/claude-skills:pr-review` | `pr-review` |
 | PR triage | `/claude-skills:pr-triage` | `pr-triage` |
+| Chargate security review | `/claude-skills:chargate-security-review` | `chargate-security-review` |
+| Brimyr quality review | `/claude-skills:brimyr-quality-review` | `brimyr-quality-review` |
 | Docs sync | `/claude-skills:docs-update` | `docs-update` |
 | Kubernetes audit | `/claude-skills:k8s-audit` | `k8s-audit` |
 | tvOS SwiftUI | `/claude-skills:swiftui-build` | `swiftui-build` |
 | Context stack | `/claude-skills:context-optimise` | `context-optimise` |
+
+`chargate-security-review` runs once the Chargate gate has finished and reviews the same diff Chargate
+just scanned — for the things a scanner structurally cannot find. Chargate matches patterns; this reads the
+change. Anything Chargate already reported is suppressed as a duplicate, so what it posts is by construction
+the additive half: the finding with no rule id behind it. It replies to Chargate's own PR summary comment, in
+a comment carrying its own hidden marker so a re-run patches that comment instead of dribbling a second one,
+and it carries its findings in a machine-readable block that `pr-triage` reads.
+
+`brimyr-quality-review` does the same job after the Brimyr patch-coverage gate. Brimyr measures whether the
+lines a PR changed are covered; the review reads whether the tests covering them actually assert anything,
+and whether the change is one a maintainer would want to maintain. Brimyr does not always post a PR comment,
+so the review degrades on purpose: it finds the gate comment by marker where there is one and posts its own
+standalone comment where there is not, and says which of the two happened rather than assuming.
 
 `docs-update` brings a repository's `./docs` (MkDocs) into agreement with the code. It does both
 halves of the job: fixing what the recent changes made wrong, and sweeping the whole codebase
@@ -81,6 +96,8 @@ Invoke the Claude commands with:
 ```text
 /claude-skills:pr-review 123
 /claude-skills:pr-triage 123
+/claude-skills:chargate-security-review 123
+/claude-skills:brimyr-quality-review 123
 /claude-skills:docs-update
 /claude-skills:k8s-audit
 /claude-skills:swiftui-build 42
@@ -115,6 +132,8 @@ Codex invocation examples:
 ```text
 Use the pr-review skill on PR 123.
 Use the pr-triage skill on PR 123.
+Use the chargate-security-review skill on PR 123.
+Use the brimyr-quality-review skill on PR 123.
 Use the docs-update skill to sync ./docs with the code.
 Use the k8s-audit skill to audit the production cluster.
 Use the swiftui-build skill on issue 42.
