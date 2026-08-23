@@ -2,15 +2,30 @@
 
 Before acting, read the target repository's `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, and relevant `README.md` files. Treat explicit hard rules from the target repository as blockers.
 
-You run **after Brimyr has finished**. Brimyr is a **patch-coverage gate**: it measures the
-fraction of the lines this PR changed that the test suite executed, and it fails when that
-fraction falls below the threshold (80% by default). It never gates on pre-existing uncovered
-code. Alongside the gate it runs `sonar-scanner` for the quality trend, non-blocking. Its
-action outputs are `mode`, `gate_result` (`pass` | `fail` | `error`), `patch_coverage`,
-`covered_lines`, and `total_lines`.
+You run **after Brimyr has finished**. Brimyr is **quality assurance**, and it gates on two
+things now, not one:
 
-That is the entirety of what Brimyr knows: **a number**. Your job is everything the number
-cannot see.
+1. **Patch coverage** — the fraction of the lines this PR changed that the test suite executed,
+   failing below the threshold (80% by default). It never gates on pre-existing uncovered code,
+   and it doesn't gate at all on a diff below `min_lines` (20 by default).
+2. **Net-new quality findings** — optional (`quality: 'true'`, off by default) and
+   **report-only out of the box**. It doesn't vendor or re-implement a linter: it calls
+   `chargate filter-sarif` across a process boundary and gates on the counts that come back.
+   `quality_fail_on` defaults to `none`, so on nearly every repo this half counts findings,
+   prints them, and blocks on none of them.
+
+Alongside both it runs `sonar-scanner` for the quality trend, non-blocking. Its action outputs
+are `mode`, `gate_result` (`pass` | `fail` | `error`), `patch_coverage`, `covered_lines`,
+`total_lines`, `total_coverage`, `quality_gate_result`, `quality_net_new_count`,
+`quality_blocking_count`, and `quality_fail_on`. The last five are recent; a repo pinned to an
+older tag emits only the first five, which is one of the ways you can end up with no quality
+half to read (§0e).
+
+And it **posts a PR comment** when `pr_comment: 'true'`: one consolidated comment carrying both
+halves, found and patched by its own hidden marker. That comment is your primary source (§0b).
+
+So Brimyr hands you a percentage, a count, and a capped list. What it does not hand anybody is
+a **judgement**, and both numbers are blind in the same direction.
 
 **100% patch coverage means every changed line was executed. It does not mean a single one of
 them was checked.** A test that calls the function and asserts nothing scores exactly the same
@@ -18,8 +33,13 @@ as a test that pins the contract. A test that mocks the dependency it exists to 
 the same as one that would notice if that dependency were deleted. A test whose name promises
 one behaviour and whose assertion enshrines the opposite scores the same as a correct one, and
 it is worse than having no test at all, because it reads as a guarantee. Coverage is a
-lower bound on effort and says nothing about a bound on risk. That gap is this workflow's
-entire subject matter.
+lower bound on effort and says nothing about a bound on risk.
+
+**And the finding count is blind the same way, from the other side.** A table reading "14
+net-new findings" above a green tick is not a statement that the fourteen are acceptable. It is
+a statement that the threshold never fired and nobody read them. A green Brimyr routinely ships a list of
+real, PR-scoped defects that no human and no gate has looked at (§4). Those two gaps, together,
+are this workflow's entire subject matter.
 
 The end state is **one** PR comment carrying the findings Brimyr could not have produced, plus
 a machine-readable block `pr-triage` can act on. You post a comment. You do not submit a GitHub
@@ -65,15 +85,16 @@ quality review, not as tool output.
   (⛔ / 🟡 / 💬).
 - Substance beats style. Never drop a specific `file:line` finding to sound casual.
 
-## The hardest rule in this repo, restated for a coverage gate
+## The hardest rule in this repo, restated for a gate that reports more than it blocks
 
 `shared/pr-triage.md` §2a says: never suppress a finding that is real, and a green gate bought
-that way is worse than a red one. The coverage-gate form of that rule has two halves, and both
-are yours:
+that way is worse than a red one. Brimyr's form of that rule has two halves, and both are yours:
 
 1. **Never soften, downgrade, or drop a real finding because Brimyr came back green.** A passing
    percentage is not evidence about any finding you hold. If the tests are theatre, `pass` is the
-   symptom, not the refutation.
+   symptom, not the refutation. The quality half carries the same trap in a sharper form:
+   `quality_fail_on` defaults to `none`, so its `pass` is not a verdict on the findings at all,
+   it is a threshold that cannot fire. "Brimyr didn't block on it" is never an argument.
 2. **Never propose a fix whose only effect is to move the percentage.** A red Brimyr invites the
    single worst remediation available: a test that calls the changed function and asserts nothing,
    written purely to touch the lines. That is dimension **1a** below, and if the PR under review
@@ -111,7 +132,7 @@ git cat-file -e "$HEAD_SHA^{commit}" && echo "head objects present"
 
 **If that check fails, do not carry on as though it passed.** `git show` on a missing object exits
 non-zero and writes nothing to stdout, so every pipeline below — the §1a detectors, the §2f
-dependency reads, the §7 line verification — degrades to *empty output*, which is
+dependency reads, the §8 line verification — degrades to *empty output*, which is
 indistinguishable from "found nothing". A silent false-clean is the one failure this whole review
 exists to prevent, so read files over the API instead and say in the report that you did:
 
@@ -125,22 +146,77 @@ That returns the file verbatim on stdout and is a drop-in replacement for `git s
 
 If you do check out, never leave the working tree dirty, never commit, never push.
 
-### b) Find Brimyr's summary comment — by marker, not by author
+### b) Read Brimyr's summary comment — the primary source, found by marker
 
-Two markers are possible. Check both:
+**Start here, and prefer this over everything below it.** When the repo runs Brimyr with
+`pr_comment: 'true'`, one consolidated comment carries both halves of the verdict, and it is
+strictly richer than the check run: the check conclusion flattens two gates into one word, and
+the per-level quality breakdown appears in no action output at all.
 
 ```bash
 gh api "repos/$OWNER/$REPO/issues/$PR/comments" --paginate \
-  -q '.[] | select(.body | test("<!-- brimyr:(pr|quality)-summary -->")) 
+  -q '.[] | select(.body | test("<!-- brimyr:(pr|quality)-summary -->"))
       | {id, url:.html_url, user:.user.login, updated:.updated_at, body}'
 ```
 
-**Brimyr may not post a comment at all.** On `main` today it does not: there is no
-`github_comment.py` in its `src/`, and `<!-- brimyr:pr-summary -->` /
-`<!-- brimyr:quality-summary -->` exist only on unmerged branches. So an empty result here is the
-*expected* case, not an error, and it is never a reason to stop. Fall through to (c), then (d).
+Two markers, and they are **not** interchangeable:
 
-### c) Fall back to the check run
+- `<!-- brimyr:pr-summary -->` is *the* comment. `brimyr ci` renders the coverage block and,
+  when quality is on, appends the quality block into that same body. This is the one you want,
+  and finding it means you need neither (c) nor (d).
+- `<!-- brimyr:quality-summary -->` belongs to a standalone `brimyr lint` run, which owns a
+  second comment under its own marker precisely so it can never overwrite the consolidated one.
+  It is a supplement, not the normal path. Finding only this one does **not** mean the coverage
+  half is missing; it means `ci` either didn't comment or hasn't run yet, so still do (c).
+
+Match on the marker, never on the author. The comment is authored by `Brimyr[bot]` when the
+token broker minted a token and by `github-actions[bot]` when it fell back to `GITHUB_TOKEN`,
+so the login isn't stable and was never the identifier.
+
+**An empty result is still routine, and it is still not an error.** `pr_comment` defaults to
+`'false'`, so a repo that hasn't switched it on gates perfectly well and comments nothing; a
+fork PR without a token is the same. Fall through to (c), then (d), and record in (e) which
+source you actually used.
+
+#### What to take out of the coverage block
+
+```markdown
+## Brimyr: Quality Assurance
+
+**Mode:** `pr` · **Gate:** `pass` · **Ecosystem:** Python
+
+| Metric | Value |
+|--------|-------|
+| Patch coverage | **91.4%** |
+| Covered / changed executable lines | 128 / 140 |
+| Total coverage (measured files) | 74.2% |
+| Covered / executable lines across 96 file(s) | 3410 / 4595 |
+| Threshold | 80.0% |
+
+✅ Patch coverage 91.4% meets the 80.0% threshold.
+```
+
+The verdict line is one of `✅ … meets the … threshold.`, `❌ **Patch coverage … is below the …
+threshold.** Uncovered changed lines:`, `✅ No changed executable lines to cover — vacuous
+pass.`, `⚪ Only N changed executable line(s) — below the N-line minimum, so the … threshold was
+**not applied**`, or `📋 Baseline run — total coverage only; no patch gate.`. A broken test run
+replaces the whole table with `> ❌ **Broken test run** — the tests failed or produced no
+coverage. This is a tool error (build red), **not** 0% patch coverage.`
+
+Two traps live in that list, and both of them read as a pass:
+
+1. **The uncovered-line list only appears when the gate FAILED.** A green comment names no
+   uncovered lines at all. So a passing Brimyr tells you nothing about *which* lines it let
+   through, and §3 (fetch the coverage report yourself) stays mandatory on a pass. That is
+   precisely where §3's subject matter lives.
+2. **`⚪ below the minimum` and `📋 Baseline run` both report `pass` while gating nothing.** A
+   small PR is not a covered PR, and a baseline run measured no diff. If you see either line,
+   the threshold was never applied and the percentage beside it is a measurement, not a verdict.
+   Say which one it was in your comment rather than repeating "the gate passed".
+
+The quality block, `## Brimyr: Net-new findings`, is parsed in §4 — that section owns it.
+
+### c) Fallback 1 — the check run, when there's no comment
 
 ```bash
 gh api "repos/$OWNER/$REPO/commits/$HEAD_SHA/check-runs?per_page=100" --paginate \
@@ -152,7 +228,12 @@ gh api "repos/$OWNER/$REPO/commits/$HEAD_SHA/check-runs?per_page=100" --paginate
 The conclusion (`success` / `failure` / `neutral`) maps onto `gate_result`, and `output.summary`
 is where a job summary lands if the workflow writes one. Read it before going to the log.
 
-### d) Fall back to the action outputs in the workflow run
+**One conclusion, two gates.** Brimyr exits on the worst verdict of the pair, so a red check is
+coverage *or* quality *or* both, and a green one only tells you neither exceeded its own
+threshold — which, at the default `quality_fail_on: none`, the quality half cannot do. The
+check run cannot separate them. If quality matters on this PR and there's no comment, go to (d).
+
+### d) Fallback 2 — the action outputs in the workflow run
 
 The outputs are consumed inside the workflow, so the REST API won't hand them to you as a field.
 Read them off the run:
@@ -166,20 +247,51 @@ gh api "repos/$OWNER/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
   -q '.jobs[] | {name, conclusion, url:.html_url}'
 
 gh run view "$RUN_ID" --log \
-  | grep -Ei 'gate_result|patch_coverage|covered_lines|total_lines|\bmode\b' | tail -40
+  | grep -Ei 'gate_result|patch_coverage|covered_lines|total_lines|total_coverage|quality_|net-new by level|\bmode\b' \
+  | tail -40
 ```
 
-Take `gate_result`, `patch_coverage`, `covered_lines`, `total_lines` from there. Those four names
-are the action's real outputs; don't invent a fifth, and don't quote a number you didn't read.
+The action's outputs are `mode`, `gate_result`, `patch_coverage`, `covered_lines`,
+`total_lines`, `total_coverage`, `quality_gate_result`, `quality_net_new_count`,
+`quality_blocking_count`, `quality_fail_on`. That's the whole list; don't invent an eleventh,
+and don't quote a number you didn't read.
+
+Three things about that log, all of which have a wrong reading that looks right:
+
+- The step writes a few names the action doesn't re-export — `threshold`, `gate_failed`,
+  `quality_gate_failed`, `quality_total_count`. Seeing them in the log is fine and they're
+  usable as context. Don't describe them as outputs of the action, because a downstream
+  workflow can't read them.
+- **`quality_*` empty means quality was off, OR the repo pins a Brimyr old enough not to emit
+  them.** The outputs alone cannot tell those apart. Say which you concluded and what it rests
+  on (the workflow file's `quality:` input, the pinned tag).
+- `total_coverage` is deliberately empty rather than `0.00` when the run measured nothing. Empty
+  is "unmeasured", not "zero". It is also not the repository's coverage: a file no test imports
+  is absent from the report and therefore absent from that denominator. It is reported, never
+  gated on, so it is context and never a finding.
 
 ### e) Record which source you used, and never pretend
 
 Set `gate_source` to exactly one of `comment`, `check-run`, `action-outputs`, or `none`, and say
-it in the comment body in plain words. **"There was no Brimyr comment on this PR" is a fact you
-report, not a gap you paper over.** If all four fail, Brimyr didn't run against this head at all
-(fork PR without secrets, a path filter, a skipped workflow, a queued run). Say that, review
-anyway — every dimension below stands on its own without the gate — and note in §5 that the
-coverage figures are unavailable rather than guessing at them.
+it in the comment body in plain words. **"Brimyr didn't post a summary comment on this PR" is a
+fact you report, not a gap you paper over** — and so is the opposite, so when you did read the
+comment, link it. If all four fail, Brimyr didn't run against this head at all (fork PR without
+secrets, a path filter, a skipped workflow, a queued run). Say that, review anyway — every
+dimension below stands on its own without the gate — and note in §6 that the coverage figures
+are unavailable rather than guessing at them.
+
+Track the quality half separately, because it has its own three-way absence and they are not
+the same fact:
+
+| What you found | What it means | What you write |
+| --- | --- | --- |
+| A `## Brimyr: Net-new findings` block | quality ran; §4 applies | the count, the levels, and your triage |
+| No such block, but a coverage block | `quality: 'false'` — the half was never enabled | "Brimyr's quality half isn't switched on for this repo" |
+| `quality_gate_result: error`, or the broken-scan line | the scan didn't complete | §4b: this is a tool error, **not** zero findings |
+| No comment at all, `quality_*` empty | can't distinguish "off" from "old Brimyr" | say which you concluded and why |
+
+**Absence of findings is not a finding of absence**, and the three rows above are the three
+different ways this review can be handed nothing. Never collapse them into "no quality issues".
 
 ### f) Pull the change itself
 
@@ -640,7 +752,10 @@ lines cluster in error handlers, fallbacks and edge branches, because those are 
 reach from a happy-path test. **An uncovered error path is worth more than ten covered getters**,
 and the gate weights them identically.
 
-So a `pass` from Brimyr is where this section starts, not where it stops.
+So a `pass` from Brimyr is where this section starts, not where it stops. And the comment won't
+help you here: Brimyr lists uncovered changed lines only when the gate **failed** (§0b), so on
+the pass this section is about, that list doesn't exist anywhere but in the coverage report you
+fetch yourself.
 
 ### 3a. Get the coverage report
 
@@ -742,12 +857,198 @@ assert. Rank by what the line does:
 | Ordinary branch logic on a non-critical path | 🟡 |
 | Logging, `__repr__`, a trivial getter, a type stub, a re-export | 💬 or drop it |
 
-The number is context, not a finding (§5). What goes in the comment is: *this* line, *this*
+The number is context, not a finding (§6). What goes in the comment is: *this* line, *this*
 behaviour, uncovered, and here's the assertion that would cover it.
 
 ---
 
-## 4. Severity
+## 4. The net-new quality findings Brimyr reported and didn't block on
+
+Brimyr's second half counts **net-new** findings: results Chargate's classifier attributes to
+this PR's diff rather than to the pre-existing pile. It is off by default, and when it's on,
+`quality_fail_on` defaults to `none`.
+
+Read what that means. **The normal state of a healthy repo is a green Brimyr carrying a list of
+real, PR-scoped defects that it deliberately did not block on.** The gate counted them, printed
+them, passed, and moved on. Nobody triages that list. It sits in a collapsed `<details>` under a
+green tick, on every PR, and the tick is what people read.
+
+That list is the single richest "what else should change here" surface on the whole pull
+request, and the expensive part is already done: something ran the linters, and something
+already worked out which findings are this PR's. What's missing is the only part a count can't
+do. **Which of these actually matter, and why can the rest wait?** That question is yours.
+
+### 4a. Read the quality block
+
+It sits under `## Brimyr: Net-new findings` in the same comment as the coverage block (§0b),
+and appears verbatim in the job summary:
+
+```markdown
+## Brimyr: Net-new findings
+
+**Gate:** `report-only` · **Blocks on:** `none`
+
+| Metric | Value |
+|--------|-------|
+| Net-new findings | **14** |
+| Pre-existing (never blocking) | 212 |
+| Suppressed in source (never blocking) | 3 |
+| Net-new by level | error=2, note=1, warning=11 |
+
+📋 Report-only — `quality_fail_on` is `none`, so findings are counted and shown but nothing blocks.
+
+<details><summary>Net-new findings</summary>
+
+- `src/api/routes/items.py:142 [BLE001]`
+- `src/sync/pull.py:80 [BLE001]`
+- `src/api/schemas.py:19 [N815]`
+… 11 more entries, one per finding …
+
+</details>
+```
+
+(Abridged: 14 findings is under the 20-entry cap, so the real block lists all fourteen and
+carries no `… and N more` line. That line appears only above 20 — see below.)
+
+- **Gate** is `pass` | `fail` | `error` | `report-only`. `report-only` and `pass` are different
+  states and the block says which; `error` is §4b.
+- **Blocks on** is the threshold in force. `none` means nothing could ever have blocked.
+- A `Blocking at <level>` row appears only on a gated run, so its absence is not a zero.
+- **Net-new by level** is the per-level breakdown, rendered `name=count` and comma-joined,
+  levels sorted alphabetically. This is the breakdown you rank against, and **no action output
+  carries it** — the `quality_*` outputs are four scalars (§0d), none of them per-level. It
+  exists in exactly two places: this block (identically in the job summary, which is the same
+  render) and one line on the run log's stderr, `brimyr: quality: net-new by level: error=2,
+  note=1, warning=11`. That line reads `quality:` and not `quality_`, so a grep for the output
+  names alone slides straight past it; §0d's pattern matches it on `net-new by level`.
+- The verdict line is exactly one of four. The `📋 Report-only` line above wins whenever
+  the run couldn't block, and it names which of the two reasons applied (`quality_fail_on` is
+  `none`, or baseline mode has no diff to gate). Otherwise:
+
+  ```text
+  ❌ **N net-new finding(s) at or above `<level>`.**
+  ✅ N net-new finding(s), none at or above `<level>`.
+  ✅ No net-new quality findings.
+  ```
+- The listing entries are `path:line [ruleId]`, **capped at 20**, with `- … and N more` when
+  there were more. An entry whose SARIF carried no location degrades to the path alone or to
+  `(no location)`.
+
+Two consequences of that cap. The count in the table is the truth and the listing is a sample,
+so when `… and N more` is present, say the listing was truncated instead of writing as though
+you reviewed all of them. And an entry with no line number can't be verified at `head_sha` and
+can't be deduped by line, so don't promote it until you've found the site yourself (§8.1).
+
+**Only one of those four lines means zero**, and it's the last one. The other three all sit
+above a `Net-new findings` count that can read 14, and each is a different way of saying nobody
+acted on them:
+
+- `📋 Report-only — quality_fail_on is none …` is the default, and it means the gate was
+  never allowed to look. This is the line you'll see on almost every repo.
+- `✅ N net-new finding(s), none at or above <level>` is a repo that *did* set a threshold, and
+  nothing reached it. Still N findings, just with a bar in place that they went under.
+- `❌ **N net-new finding(s) at or above <level>.**` is the rare one: the gate blocked. Those
+  specific findings are already being acted on, so they're the least interesting to you (§6c)
+  and the *other* net-new findings in the listing are still untriaged.
+
+Read the count first and the tick second. A green tick above a non-zero count is this section's
+entire reason to exist.
+
+### 4b. A scan that didn't complete is not a clean PR
+
+Chargate writes its counts JSON *before* it decides whether the scan produced anything, so a run
+that scanned nothing leaves a well-formed document full of zeros. On its own that file is
+indistinguishable from a clean pull request, which is why Brimyr refuses to read it and reports
+an error instead. Two distinct shapes, and you must not read either as zero:
+
+- **Broken.** `quality_gate_result: error`, and the block carries
+  `> ❌ **The quality scan did not complete** — Chargate errored or produced no report. This is
+  a tool error (build red), **not** zero net-new findings.` Everything downstream of it —
+  the count, the levels, the listing — is absent, not zero.
+- **Partial.** The scan exited 0 but some linters didn't run:
+  `⚠️ **The scan was not complete** — these linters did not run: …`. The count is real for the
+  linters that ran and silently missing everything the named ones would have said. A scan that
+  quietly got smaller and a repo that's genuinely clean produce the same number.
+
+How to tell, in order: `quality_gate_result` from §0d if you have it, then grep the comment body
+for either line, then check whether a `## Brimyr: Net-new findings` heading exists at all (no
+heading means quality was never enabled — §0e's table). **Never write "no quality findings" off
+a broken or partial scan.** Say the scan didn't complete, name which linters were missing when
+the block names them, and mark the section unchecked. That is the same honesty rule §3c applies
+to an unreachable coverage report, and for the same reason: a silent false-clean is the failure
+this whole review exists to prevent.
+
+### 4c. Severity here is the SARIF level, not a security band
+
+`fail_on` speaks SARIF levels: `none` | `note` | `warning` | `error` | `any`. It does **not**
+speak `critical` / `high` / `medium` / `low`. This is not a naming quirk, it's load-bearing:
+Brimyr gates off the counts document, where `per_severity_*` is populated only from a real
+`security-severity` property, and quality linters essentially never emit one. A band-valued
+threshold would therefore match nothing, on every PR, forever, while looking exactly like a
+configured gate. `per_level_*` covers every result, so levels are what the gate can actually
+reach.
+
+| SARIF level | Chargate band | What it actually tells you |
+| --- | --- | --- |
+| `error` | `high` | the linter is confident the rule applies |
+| `warning` | `medium` | the linter thinks it applies |
+| `note` | `low` | the linter is offering an opinion |
+
+Chargate's `fail-on: high` is Brimyr's `fail_on: error`. `any` blocks on every net-new finding
+including ones the producing linter left unlevelled; `none` is report-only.
+
+**A reviewer who reads those as severity bands mis-ranks the entire list.** A linter's `error`
+means "this rule is confident", not "this is dangerous" — a naming-convention rule fires at
+`error` all day. A `note` from a rule about a swallowed exception can cost you an outage. Use
+the level to read the linter's confidence, and rank by what the code does, per §4d. Never
+translate a level into a severity marker mechanically; ⛔ / 🟡 / 💬 are your judgement (§5),
+not a relabelling of somebody else's enum.
+
+### 4d. Judge them, don't restate them
+
+**Never paste the listing back into your comment.** It's already on the PR, one collapsed
+`<details>` above yours, and restating it is exactly the duplication §6 exists to prevent. What
+you add is a decision. Sort the net-new findings into three buckets and report only the first
+two:
+
+1. **Matters now.** The finding names a defect this rubric would have caught on its own: a
+   swallowed exception (§2e), a bare `except`, a mutable default argument, a resource never
+   closed, a name shadowing something that changes behaviour, an unreachable branch (§2g).
+   Promote it: write your own concrete failure sentence, give it the `class` from §7b that
+   describes the defect, and say in one clause that the linter flagged it and you're keeping it
+   because you can name what breaks.
+2. **Matters, later.** Real, but not this PR's job: it sits on a line the diff touched
+   incidentally, or the fix is a refactor with its own blast radius. One line, 💬, no drama.
+3. **Noise here.** Style, line length, an idiom this repo has already decided against, a rule
+   it suppresses elsewhere in the tree. Drop it, count it, don't narrate it.
+
+The bar for bucket 1 is the bar the whole rubric uses: **you can name the failure** in §8.4's
+shape, *this input or state produces this wrong outcome*. A finding you can only restate as the
+linter's own message is one you're copying, not judging. Leave it in bucket 3 and let the count
+speak for it.
+
+Then say the split, in one sentence, in the comment:
+
+> Brimyr reported 14 net-new findings and blocked on none of them. Two are worth fixing here:
+> the bare `except` at `src/sync/pull.py:80` and the client never closed at `src/api/client.py:33`.
+> The other 12 are formatting and naming, and they can wait.
+
+That sentence is this section's deliverable. It's short, it's a judgement, and it is the only
+thing on the PR that tells a reader whether the collapsed list under the green tick was worth
+opening.
+
+Two guard rails on the promotion:
+
+- **`Pre-existing (never blocking)` is not this PR's debt**, the same way §2a's duplication rule
+  only covers what the diff adds. Don't promote one into a blocking finding of yours. If you
+  report it at all, it's `pre_existing: true` and never `blocks: true` (§7b).
+- **Never argue from the gate's silence.** `quality_fail_on: none` means the threshold could not
+  fire; it is a configuration, not an assessment. A finding you can justify at ⛔ stays ⛔ on a
+  green quality gate, exactly as it does on a green coverage gate.
+
+---
+
+## 5. Severity
 
 Same three markers as `pr-review`, so `pr-triage` and the humans reading both comments don't have
 to learn a second vocabulary:
@@ -764,7 +1065,7 @@ to learn a second vocabulary:
 
 In the machine-readable block those become the shared vocabulary the security review also uses:
 ⛔ is `critical` or `high` with `blocks: true`, 🟡 is `medium`, 💬 is `low`, and `verdict` is
-`blocking` / `advisory` / `clean` (§6b). Pick `critical` over `high` when the defect is already
+`blocking` / `advisory` / `clean` (§7b). Pick `critical` over `high` when the defect is already
 reachable in production rather than only on the next change.
 
 **This comment sets no status check.** A ⛔ here doesn't block the merge button; it's a judgement,
@@ -777,21 +1078,39 @@ code makes the failure "probably fine" and the only failure you can name is hypo
 Missing coverage stays 🟡 even though nothing fails today — that's the whole subject here.
 
 And the rule from the top, one more time because this is where it gets tested: **`gate_result:
-pass` is not a reason to relabel anything downward.**
+pass` is not a reason to relabel anything downward.** Neither is `quality_gate_result: pass`,
+and that one is worse, because at the default `quality_fail_on: none` it passes *by
+construction* — the threshold cannot fire, so the verdict carries no information about any
+finding underneath it. A ⛔ you can justify stays a ⛔ on a doubly green Brimyr.
+
+**Don't inherit the linter's ranking either.** A SARIF level is the producing tool's confidence,
+not your severity (§4c). Mapping `error` → ⛔ and `note` → 💬 mechanically produces a review that
+ranks a naming-convention rule above a swallowed exception. Rank by what the code does.
 
 ---
 
-## 5. Deduplicate against Brimyr and SonarQube
+## 6. Deduplicate: what the gates already said, and which lane owns it
 
-Everything you post must be **additive**. The point of this review is what the gate did not catch.
-A finding the gate already reported is a duplicate: suppress it, count it, and say how many you
-dropped. A comment that restates the gate is noise, and noise is how a real finding gets skimmed
-past.
+Everything you post must be **additive**. The point of this review is what the gates did not
+catch. A finding a gate already reported is a duplicate: suppress it, count it, and say how many
+you dropped. A comment that restates a gate is noise, and noise is how a real finding gets
+skimmed past.
 
-### 5a. Collect what has already been said
+There are now **three** axes to dedupe against, and they are not the same check:
+
+1. **Coverage** — Brimyr's own percentage and, on a failing run, its uncovered-line list (§6e).
+2. **SonarQube** — the non-blocking scan Brimyr runs alongside the gate (§6b).
+3. **Brimyr's own net-new quality findings** — new, and the one this rubric used not to have
+   (§6c). It's the axis most likely to catch you, because those findings are Chargate-derived
+   and read like a different tool's output while sitting inside Brimyr's comment.
+
+And there's a fourth thing that isn't a dedupe at all but a **lane boundary** (§6d): security
+findings are not yours to report, whichever gate surfaced them.
+
+### 6a. Collect what has already been said
 
 ```bash
-# Brimyr's own comment, if it exists (§0b) — parse its findings out of the body
+# Brimyr's own comment (§0b) — both blocks: the coverage verdict AND the net-new quality listing
 gh api "repos/$OWNER/$REPO/issues/$PR/comments" --paginate \
   -q '.[] | select(.body | test("<!-- brimyr:(pr|quality)-summary -->")) | .body'
 
@@ -824,7 +1143,7 @@ Paginate the threads and check `totalCount` against what you got back. `reviewTh
 silently drops the overflow, and the ones it drops are the **newest** — exactly what a scanner
 posted seconds ago.
 
-### 5b. SonarQube
+### 6b. SonarQube
 
 Brimyr runs `sonar-scanner` non-blocking, so Sonar's issues are already on this PR somewhere and
 restating them is a duplicate. Read them from whichever of these the environment gives you:
@@ -848,7 +1167,66 @@ gh api "repos/$OWNER/$REPO/commits/$HEAD_SHA/status" -q '.statuses[] | select(.c
 If none of that resolves, say in the comment that Sonar's issue list wasn't reachable, so a
 finding of yours *might* overlap with one of its. That's an honest caveat and it costs one line.
 
-### 5c. The dedup rule
+### 6c. Brimyr's own net-new quality findings — the second axis
+
+This is new, and it is the axis a rubric written for a coverage-only gate has no habit for. Pull
+the listing entries out of the comment body and hold them beside your own findings:
+
+```bash
+gh api "repos/$OWNER/$REPO/issues/$PR/comments" --paginate \
+  -q '.[] | select(.body | test("<!-- brimyr:(pr|quality)-summary -->")) | .body' \
+  | sed -n '/## Brimyr: Net-new findings/,$p' \
+  | grep -oE '^- `[^`]+`' | sed 's/^- //; s/`//g'
+```
+
+Each surviving line is `path:line [ruleId]` (§4a). Match them against your findings on the same
+rule §6e uses: same path, line within ±3, same underlying defect. Then apply this, which is the
+part that differs from every other axis:
+
+- **Restating one is a duplicate.** If your finding is the linter's finding in your own words,
+  drop it and count it. The reader can see the listing.
+- **Promoting one is not a duplicate** — it's the deliverable of §4d. You're adding the named
+  failure, the severity judgement, and the fix. Lead with those and never re-narrate the rule
+  id. Say you're keeping it and why in one clause.
+- **The gate's silence is not a dedupe argument.** With `quality_fail_on: none` every finding in
+  that listing was "already reported and not acted on". That is a threshold, not an assessment,
+  and it is the reason this axis exists rather than a reason to drop everything on it.
+
+The `… and N more` cap (§4a) applies here too: findings past the cap are not in the listing, so
+a finding of yours that doesn't match anything visible may still be a duplicate of one you can't
+see. Say so once, in the same breath as the truncation caveat, rather than claiming a clean
+dedupe you couldn't perform.
+
+### 6d. The lane boundary: security is Chargate's, quality is yours
+
+Both gates now emit Chargate-derived findings. Brimyr's quality half **calls** `chargate
+filter-sarif`, so the classifier behind Brimyr's listing and the one behind Chargate's comment
+are the same engine, pointed at different linter sets. That makes the overlap real, and it makes
+the rule that separates the two post-gate reviews worth stating in one line:
+
+**The boundary is the SUBJECT, not the tool.** Not which gate reported it, not which binary ran
+it. What the finding is about.
+
+| Subject | Lane | What you do with it |
+| --- | --- | --- |
+| Injection, authz, authn, secrets, crypto, SSRF, deserialisation, path traversal, a vulnerable dependency | `chargate-security-review` | leave it, even when it showed up in Brimyr's listing |
+| A swallowed exception, dead code, a name that lies, complexity, duplication, a missing or dishonest test | yours | judge it (§4d), report it |
+| Both at once — a swallowed exception in an authz path | security leads | report only the quality half, and say in one clause that the security lane owns the rest |
+
+Two concrete tests before you promote anything out of Brimyr's listing. **Read the rule id**:
+Chargate's curated quality set is `GO_GOLANGCI_LINT`, `JAVASCRIPT_ES`, `JAVA_PMD`,
+`PYTHON_RUFF`, `TYPESCRIPT_ES`, so a `ruff`, `golangci-lint`, `eslint` or `PMD` rule is yours by
+construction, while a rule id from a security scanner arrived by a different route and is not.
+And when the id doesn't settle it, **ask who the fix protects**: an attacker, or the next
+maintainer. Post to that lane.
+
+Then check whether the other lane has already run — §6a's third query lists any
+`<!-- agent-skills: -->` review on the PR — and drop anything
+`<!-- agent-skills:chargate-security-review -->` has already said. Two reviews from one system
+that both report the same finding is precisely the failure this section exists to prevent, and
+it costs more credibility than either finding is worth.
+
+### 6e. The dedup rule
 
 Drop a finding of yours when a gate or an existing thread already names **the same defect at the
 same place**: same file, line within ±3 (a scanner and a human anchor differently), and the same
@@ -859,18 +1237,22 @@ Keep it, and say why, when you're **materially extending** it: the gate said the
 uncovered, you can say the uncovered branch is the authz denial and name the assertion. Lead the
 finding with what's new, don't re-narrate what the gate said.
 
-**Never restate the coverage percentage as a finding.** `patch_coverage` is context for the first
+**Never restate a gate number as a finding.** `patch_coverage` is context for the first
 paragraph of the comment. "Patch coverage is 84%" is not a finding, it's the gate's output, and
-repeating it back is the exact noise this section exists to prevent.
+repeating it back is the exact noise this section exists to prevent. Same for
+`quality_net_new_count`: "Brimyr reported 14 net-new findings" is context, and the *finding* is
+which two of the fourteen matter and why (§4d). `total_coverage` is context too, and it isn't
+even the repository's coverage (§0d), so it never carries a finding on its own.
 
 Count the drops. `duplicates_dropped` goes in the machine-readable block and one plain sentence
-goes in the body: "Dropped 3 as duplicates of Chargate and Sonar." That number is how a reader
-knows you looked, and it's how a maintainer notices when the gates and this review start
-overlapping enough to retune one of them.
+goes in the body: "Dropped 3 as duplicates of Chargate, Sonar and Brimyr's own findings list."
+Name the sources you deduped against, because with three axes "dropped 3" no longer says which
+check you actually ran. That number is how a reader knows you looked, and it's how a maintainer
+notices when the gates and this review start overlapping enough to retune one of them.
 
 ---
 
-## 6. The reply comment — one, idempotent, patched in place
+## 7. The reply comment — one, idempotent, patched in place
 
 **Exactly one PR issue comment, carrying the hidden marker
 `<!-- agent-skills:brimyr-quality-review -->` as its first line.** Find the prior one and `PATCH`
@@ -878,10 +1260,11 @@ it; `POST` only when none exists. Same find-or-patch pattern Chargate uses for
 `<!-- chargate:pr-summary -->`. One comment per PR, forever, rewritten whole on every run.
 
 GitHub issue comments don't thread, so "replying to Brimyr" means: link Brimyr's comment in your
-opening line so the two read as a pair. When Brimyr posted nothing, you have nothing to link, and
-you say so.
+opening line so the two read as a pair. That link is the normal case now — when the repo runs
+with `pr_comment: 'true'` there is a comment to point at, and yours reads as the second half of
+it. When Brimyr posted nothing, you have nothing to link, and you say so instead.
 
-### 6a. Find the prior comment
+### 7a. Find the prior comment
 
 ```bash
 PRIOR=$(gh api "repos/$OWNER/$REPO/issues/$PR/comments" --paginate --slurp \
@@ -892,7 +1275,7 @@ echo "prior comment: ${PRIOR:-none}"
 Use `last`, not `first`: if a previous run ever double-posted, patch the newest and say in the
 report that a duplicate exists so a human can delete the stale one. Never post a third.
 
-### 6b. Write the body
+### 7b. Write the body
 
 Write it to `.git/brimyr-quality-review.md` with **real newlines** (never the two literal
 characters `\n`). Structure:
@@ -902,12 +1285,15 @@ characters `\n`). Structure:
 ## Quality review
 
 Brimyr's patch coverage came back at 91.4% (128 of 140 changed lines), over the 80% threshold, so
-the gate passed. [Its summary is here](<link to the Brimyr comment, when one exists>). Here's what
-the number doesn't cover.
+the gate passed. [Its summary is here](<link to the Brimyr comment>). It also reported 14 net-new
+quality findings and blocked on none of them, because `quality_fail_on` is `none`. One of those
+is worth fixing here. Everything below is what neither number covers.
 
-<When no Brimyr comment exists, that first paragraph reads instead:
+<When Brimyr posted no comment, that first paragraph names the source you did use instead:
 "Brimyr didn't post a summary comment on this PR, so the figures below come from the check run:
-patch coverage 91.4%, gate `pass`." State the source. Never imply a comment you didn't read.>
+patch coverage 91.4%, gate `pass`, and no quality figures at all." State the source, and never
+imply a comment you didn't read. When the quality half didn't run, say that rather than
+implying it came back clean.>
 
 ### ⛔ Blocking
 - `src/nievah/worker/sqs_drain.py:87`: `test_a_client_setup_failure_does_not_propagate` asserts
@@ -922,14 +1308,20 @@ patch coverage 91.4%, gate `pass`." State the source. Never imply a comment you 
 - `tests/test_items.py:30`: `test_list_items` calls `list_items()` and asserts only that it
   didn't raise. Return `[]` unconditionally from `list_items` and it still passes. Assert the two
   enabled items are present and the disabled one is absent.
+- `src/sync/pull.py:80`: Brimyr's findings list flags the bare `except` here and didn't block on
+  it. Keeping it, because I can name what it costs: it catches the `KeyboardInterrupt` and the
+  `CancelledError` too, so the sync task can't be shut down cleanly and a deploy has to wait out
+  the pod's termination grace period. Catch `Exception`, and let the two control-flow exceptions
+  through.
 
 ### 💬 Notes
 - nit: `normalize_ref()` at `src/utils/refs.py:12` duplicates the block added at
   `src/sync/pull.py:60`.
 
-Dropped 3 as duplicates of Chargate and Sonar. Nothing here sets a status check: the blocking
-item above is a judgement, not a second gate, so the merge button is exactly as green as Brimyr
-left it. Coverage detail below.
+The other 13 net-new findings are formatting and naming, and they can wait. Dropped 3 as
+duplicates of Chargate, Sonar and Brimyr's own findings list. Nothing here sets a status check:
+the blocking item above is a judgement, not a second gate, so the merge button is exactly as
+green as Brimyr left it. Coverage detail below.
 
 <details>
 <summary>Uncovered changed lines</summary>
@@ -947,12 +1339,17 @@ left it. Coverage detail below.
   "skill": "brimyr-quality-review",
   "gate": "brimyr",
   "head_sha": "<HEAD_SHA>",
-  "gate_comment_id": null,
-  "gate_source": "check-run",
+  "gate_comment_id": 2481019332,
+  "gate_source": "comment",
   "gate_result": "pass",
   "patch_coverage": 91.4,
   "covered_lines": 128,
   "total_lines": 140,
+  "total_coverage": 74.2,
+  "quality_gate_result": "pass",
+  "quality_net_new_count": 14,
+  "quality_blocking_count": 0,
+  "quality_fail_on": "none",
   "verdict": "blocking",
   "duplicates_dropped": 3,
   "findings": [
@@ -991,7 +1388,11 @@ reviews. Only `skill`, `class`, and the gate-specific fields differ. Field rules
   `test-over-mocked`, `test-inverted-assertion`, `test-missing-error-path`,
   `test-missing-boundary`, `test-flaky`, `test-cannot-fail`, `duplication`, `mixed-responsibility`,
   `misleading-name`, `speculative-abstraction`, `swallowed-error`, `deferred-dependency`,
-  `dead-code`, `stale-comment`, `complexity`, `uncovered-critical-line`.
+  `dead-code`, `stale-comment`, `complexity`, `uncovered-critical-line`. **A finding you
+  promoted out of Brimyr's net-new listing (§4d) takes the class that describes the defect** —
+  a bare `except` is `swallowed-error`, an unread parameter is `dead-code`. Don't add a class
+  for "came from the linter" and never put a rule id in this field; `pr-triage` switches on
+  these values and the list is the contract.
 - `failure` is the concrete failure in the shape "*this input or state* produces *this wrong
   outcome*", or for a test finding, "*this mutation* leaves the test green" (§1). It is the
   analogue of the security review's `attack` field. Never a restatement of the title.
@@ -1005,11 +1406,22 @@ reviews. Only `skill`, `class`, and the gate-specific fields differ. Field rules
   `probable` without saying in the prose which link you couldn't verify.
 - `pre_existing` is `true` when the defect sits on code this PR did not introduce (a weak test
   that already covered the lines the diff touched). Report those, but never `blocks: true`.
-- `gate_comment_id` is the id of Brimyr's summary comment, or `null` when it posted none. That
-  `null` is the signal that the gate comment was absent, so don't omit the key.
+- `gate_comment_id` is the id of Brimyr's summary comment, or `null` when it posted none. It is
+  usually a real id now, so `null` is a claim: it says you looked for the comment and there
+  wasn't one. Don't omit the key, and don't leave it `null` on a run where `gate_source` is
+  `comment`.
 - `gate_source` is `comment` | `check-run` | `action-outputs` | `none`. When it's `none`,
-  `patch_coverage`, `covered_lines` and `total_lines` are `null` — **never a guess** — and
-  `gate_result` is `unknown`.
+  `patch_coverage`, `covered_lines`, `total_lines` and `total_coverage` are `null` — **never a
+  guess** — and `gate_result` is `unknown`.
+- `total_coverage` is the overall percentage across the files the run **measured**, or `null`.
+  It is not the repository's coverage and is never gated on (§0d), so it is context and never
+  supports a finding by itself.
+- The four `quality_*` keys mirror the action outputs of the same name and are **all `null` when
+  the quality half didn't run** — which is the default, so `null` here is the common case and
+  means "off", not "clean". Two rules on them: `quality_gate_result: "error"` means the scan
+  didn't complete, and with it set `quality_net_new_count` is evidence of nothing (§4b); and
+  `quality_fail_on` is carried even though it looks redundant, because `"none"` is the only
+  thing distinguishing a report-only pass from a genuinely clean one.
 - `path` is repo-relative, `line` is required and real at `head_sha`, `end_line` only when the
   finding spans a statement.
 - `id` is stable across runs for the same defect (`bqr-<n>` in the order they appear), so a
@@ -1034,23 +1446,27 @@ gh api "repos/$OWNER/$REPO/issues/$PR/comments" --paginate --slurp \
 Run exactly that against your own body **before** you post it. If `jq` errors, the block is
 malformed and the whole point of it is lost.
 
-### 6c. When there's nothing to report
+### 7c. When there's nothing to report
 
 Say it plainly and post anyway. The comment is the record that the review ran, and its absence is
 indistinguishable from a crashed job:
 
 > ## Quality review
 >
-> Brimyr passed at 96% patch coverage (48 of 50 changed lines). I read the four new tests against
-> the change and couldn't break any of them by hand: each one asserts on behaviour, the error
-> branch in `pull.py` has its own case, and the two uncovered lines are a `__repr__` and a
-> re-export. Nothing to fix here.
+> Brimyr passed at 96% patch coverage (48 of 50 changed lines) and reported no net-new quality
+> findings. I read the four new tests against the change and couldn't break any of them by hand:
+> each one asserts on behaviour, the error branch in `pull.py` has its own case, and the two
+> uncovered lines are a `__repr__` and a re-export. Nothing to fix here.
+
+If the quality half reported findings and you judged that none of them matter here, say that
+too, with the count: "Brimyr reported 6 net-new findings, all formatting, and I'd leave them."
+A silent zero and a triaged six look identical to a reader, and only one of them is work you did.
 
 `findings` stays `[]` and `verdict` is `clean` in the block, which is exactly how a consumer
 tells "reviewed, nothing found" from "never reviewed". Don't manufacture a nit so the comment
 looks like work.
 
-### 6d. Post or patch
+### 7d. Post or patch
 
 ```bash
 if [ -n "$PRIOR" ]; then
@@ -1069,12 +1485,12 @@ Pass the body with `-F body=@<file>` (or build the payload with `jq -n --rawfile
 a stray backtick or newline turns into a mangled comment or a 422.
 
 **One call. Once the PATCH or POST returns a URL, you are done** — don't re-post to "double-check",
-don't add a follow-up. If it fails, re-run §6a first: check whether your comment landed anyway
+don't add a follow-up. If it fails, re-run §7a first: check whether your comment landed anyway
 before you try again, so a retry can never become a second comment.
 
 ---
 
-## 7. Verify before you report
+## 8. Verify before you report
 
 Do this pass **before** writing the body, on every finding, and delete the ones that fail it. The
 credibility of the whole comment is set by its weakest line.
@@ -1098,23 +1514,29 @@ credibility of the whole comment is set by its weakest line.
    *this wrong outcome*", or, for a test finding, "*this mutation* leaves the test green". If you
    can't write that sentence, it isn't a finding.
 
-5. **No invented flags, markers, outputs or API shapes.** Brimyr's outputs are `mode`,
-   `gate_result`, `patch_coverage`, `covered_lines`, `total_lines`. Its markers are
-   `<!-- brimyr:pr-summary -->` and `<!-- brimyr:quality-summary -->`, and it may emit neither.
-   Chargate's are `<!-- chargate:pr-summary -->` and `<!-- chargate:finding -->`. That's the whole
-   list. Anything else you'd like to exist, doesn't.
+5. **No invented flags, markers, outputs or API shapes.** Brimyr's action outputs are `mode`,
+   `gate_result`, `patch_coverage`, `covered_lines`, `total_lines`, `total_coverage`,
+   `quality_gate_result`, `quality_net_new_count`, `quality_blocking_count`, `quality_fail_on`
+   (§0d, which also lists the few extra names the step writes but the action doesn't export).
+   `quality_fail_on` takes `none` | `note` | `warning` | `error` | `any`, and **never** a
+   severity band (§4c). Its markers are `<!-- brimyr:pr-summary -->` for the consolidated
+   comment and `<!-- brimyr:quality-summary -->` for a standalone `brimyr lint` run, and on a
+   repo with `pr_comment: 'false'` it emits neither. Its two comment headings are
+   `## Brimyr: Quality Assurance` and `## Brimyr: Net-new findings`. Chargate's markers are
+   `<!-- chargate:pr-summary -->` and `<!-- chargate:finding -->`. That's the whole list.
+   Anything else you'd like to exist, doesn't.
 
 6. **No padding.** Three real findings beat three real ones plus five nits. Every line you add
    that the reader can dismiss makes the ⛔ above it easier to dismiss too.
 
-7. **The machine-readable block parses, and its counts match the prose.** Run the §6b reader
+7. **The machine-readable block parses, and its counts match the prose.** Run the §7b reader
    against your own body before posting. `verdict` must follow from `blocks`, the number of
    `blocks: true` entries must equal the bullets under ⛔, and `duplicates_dropped` must equal the
    number you state in the prose.
 
 ---
 
-## 8. Report back
+## 9. Report back
 
 Be idempotent about it: if a comment on this `head_sha` with these findings already exists, say so
 and stop rather than patching it with an identical body.
@@ -1122,13 +1544,17 @@ and stop rather than patching it with an identical body.
 Otherwise end with:
 
 - **Where the gate figures came from** (`comment` / `check-run` / `action-outputs` / `none`) and
-  what they were. If Brimyr posted no comment, lead with that — it's the most likely thing a
-  reader will otherwise assume you missed.
+  what they were, for **both** halves. If Brimyr posted no comment, lead with that — it's the
+  most likely thing a reader will otherwise assume you missed. If the quality half didn't run,
+  say "not enabled" or "scan didn't complete" and never "no findings" (§0e).
+- **What you did with the net-new quality findings**: how many there were, how many you promoted,
+  and one line on why the rest can wait. A count with no triage behind it is the state this
+  section exists to end.
 - A short table: **severity → `file:line` → dimension → finding → the assertion or fix required.**
 - **How many duplicates you dropped**, and against which source.
 - **What you reviewed shallowly and why** — a generated file, a large fixture, a section you
-  couldn't check because no coverage report was reachable (§3c). No silent truncation: a section
-  you skipped must be named as skipped.
+  couldn't check because no coverage report was reachable (§3c), a findings listing truncated at
+  the 20-entry cap (§4a). No silent truncation: a section you skipped must be named as skipped.
 - Whether the mutation probe ran executed (tier 2) or static (tier 1), and confirmation the tree
   is clean if you mutated anything.
 - Any judgement call, so a human can weigh it: a severity you were torn on, a duplicate you kept

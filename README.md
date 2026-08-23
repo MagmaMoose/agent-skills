@@ -28,11 +28,14 @@ the additive half: the finding with no rule id behind it. It replies to Chargate
 a comment carrying its own hidden marker so a re-run patches that comment instead of dribbling a second one,
 and it carries its findings in a machine-readable block that `pr-triage` reads.
 
-`brimyr-quality-review` does the same job after the Brimyr patch-coverage gate. Brimyr measures whether the
-lines a PR changed are covered; the review reads whether the tests covering them actually assert anything,
-and whether the change is one a maintainer would want to maintain. Brimyr does not always post a PR comment,
-so the review degrades on purpose: it finds the gate comment by marker where there is one and posts its own
-standalone comment where there is not, and says which of the two happened rather than assuming.
+`brimyr-quality-review` does the same job after the Brimyr gate. Brimyr measures two things: whether the
+lines a PR changed are covered, and — optionally, report-only unless a threshold is set — how many net-new
+quality findings the change introduced. The review reads whether the tests covering those lines actually
+assert anything, whether the change is one a maintainer would want to maintain, and which of the net-new
+findings the gate counted but blocked on none of are worth acting on here. Brimyr posts its consolidated
+comment only when the calling workflow asks it to, so the review degrades on purpose: it finds the gate
+comment by marker where there is one and posts its own standalone comment where there is not, and says which
+of the two happened rather than assuming.
 
 `docs-update` brings a repository's `./docs` (MkDocs) into agreement with the code. It does both
 halves of the job: fixing what the recent changes made wrong, and sweeping the whole codebase
