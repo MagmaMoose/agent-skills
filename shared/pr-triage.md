@@ -263,7 +263,7 @@ These fields decide how the finding gets handled, and §2b turns each one into a
 | `pre_existing` | `true` means the finding sits on code this PR did not introduce, so §2a's pre-existing rule applies: decide the scope before you widen the diff. |
 | `duplicates_dropped` | How many candidate findings the review discarded because its gate already reported them. Non-zero is the additive design working, not findings going missing. |
 | `head_sha` | The commit the review actually read. See the staleness check below — this one is a precondition, not a detail. |
-| `gate_comment_id` / `gate_source` | Where the review got the gate's own result. `gate_comment_id: null` with `gate_source: "none"` means **the gate posted no comment and the review said so honestly** — Brimyr on `main` does not post one. That is a degraded-but-valid review, not a failure, and the coverage numbers beside it will be `null` rather than guessed. Carry that distinction into the §6 report; do not report it as a broken review. |
+| `gate_comment_id` / `gate_source` | Where the review got the gate's own result. `gate_comment_id: null` with `gate_source: "none"` means **the gate posted no comment and the review said so honestly** — Brimyr posts one only when the calling workflow sets `pr_comment: 'true'`, which is not the default. That is a degraded-but-valid review, not a failure, and the coverage numbers beside it will be `null` rather than guessed. Carry that distinction into the §6 report; do not report it as a broken review. |
 
 **Check `head_sha` before you act on a single line number.** There is exactly one of these
 comments per review per PR, forever, PATCHed in place — so the comment you just read is not
