@@ -14,7 +14,9 @@ things now, not one:
    `quality_fail_on` defaults to `none`, so on nearly every repo this half counts findings,
    prints them, and blocks on none of them.
 
-Alongside both it runs `sonar-scanner` for the quality trend, non-blocking. Its action outputs
+Alongside both it *can* run `sonar-scanner` for the quality trend, non-blocking. That pass is
+conditional on all three of `sonar_url`, `sonar_token` and a `sonar-scanner` on PATH; miss any
+one and it is skipped with a reason, and nothing fails either way. Its action outputs
 are `mode`, `gate_result` (`pass` | `fail` | `error`), `patch_coverage`, `covered_lines`,
 `total_lines`, `total_coverage`, `quality_gate_result`, `quality_net_new_count`,
 `quality_blocking_count`, and `quality_fail_on`. The last five are recent; a repo pinned to an
@@ -1099,7 +1101,8 @@ skimmed past.
 There are now **three** axes to dedupe against, and they are not the same check:
 
 1. **Coverage** — Brimyr's own percentage and, on a failing run, its uncovered-line list (§6e).
-2. **SonarQube** — the non-blocking scan Brimyr runs alongside the gate (§6b).
+2. **SonarQube** — the non-blocking scan Brimyr runs alongside the gate, *when it is configured
+   to* (§6b). Confirm it actually ran before deduping against it.
 3. **Brimyr's own net-new quality findings** — new, and the one this rubric used not to have
    (§6c). It's the axis most likely to catch you, because those findings are Chargate-derived
    and read like a different tool's output while sitting inside Brimyr's comment.
@@ -1145,8 +1148,22 @@ posted seconds ago.
 
 ### 6b. SonarQube
 
-Brimyr runs `sonar-scanner` non-blocking, so Sonar's issues are already on this PR somewhere and
-restating them is a duplicate. Read them from whichever of these the environment gives you:
+Brimyr can run `sonar-scanner` non-blocking, and when it does, Sonar's issues are already on this
+PR somewhere and restating them is a duplicate.
+
+**Establish that it ran before you dedupe against it.** `run_scanner` returns early, and says so
+in the run log, on any of three conditions: no `sonar_url`, no `sonar_token`, or no
+`sonar-scanner` on PATH. All three read `skipped (...)`. Treating a skipped scan as a source you
+have already deduped against is how a real finding gets dropped as a duplicate of nothing:
+
+```bash
+# did it run at all? one of: "analysis uploaded" | "skipped (...)" | "sonar-scanner failed"
+gh run view "$RUN_ID" --log 2>/dev/null | grep -iE 'sonar.*(uploaded|skipped|failed)' | head -3
+```
+
+If it was skipped, SonarQube is not a dedup axis on this PR. Say so in your report rather than
+implying you checked it. When it did run, read the issues from whichever of these the
+environment gives you:
 
 ```bash
 # project key, from the scanner's own config

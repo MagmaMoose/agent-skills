@@ -31,8 +31,9 @@ Brimyr is quality assurance and gates on two things:
 Its outputs are `mode`, `gate_result` (`pass` | `fail` | `error`), `patch_coverage`,
 `covered_lines`, `total_lines`, `total_coverage`, `quality_gate_result`,
 `quality_net_new_count`, `quality_blocking_count`, `quality_fail_on`. It also runs
-`sonar-scanner` non-blocking for the quality trend, and posts one consolidated PR comment when
-`pr_comment: 'true'`.
+`sonar-scanner` non-blocking for the quality trend when `sonar_url`, `sonar_token` and a
+`sonar-scanner` binary are all present (skipped with a reason otherwise), and posts one
+consolidated PR comment when `pr_comment: 'true'`.
 
 The coverage number says every changed line ran, not that anything was asserted. The finding
 count says findings exist, not that anyone judged them: with `quality_fail_on: none`, a green
