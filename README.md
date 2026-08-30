@@ -19,6 +19,7 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | Docs sync | `/claude-skills:docs-update` | `docs-update` |
 | Kubernetes audit | `/claude-skills:k8s-audit` | `k8s-audit` |
 | tvOS SwiftUI | `/claude-skills:swiftui-build` | `swiftui-build` |
+| macOS SwiftUI | `/claude-skills:macos-swiftui` | `macos-swiftui` |
 | Context stack | `/claude-skills:context-optimise` | `context-optimise` |
 
 `chargate-security-review` runs once the Chargate gate has finished and reviews the same diff Chargate
@@ -59,6 +60,17 @@ not), and lists the merge-ordering hazards among the open remediation PRs.
 against the tvOS SDK that runs in seconds with no simulator: a change gets proven to compile
 instead of asserted. It then covers the quieter tier, where an API compiles on tvOS and no D-pad
 gesture can ever reach it.
+
+`macos-swiftui` covers changes to a macOS SwiftUI target, and exists because the tvOS workflow's
+hard-won rules are the wrong ones here: there is no focus engine, and almost nothing is
+unavailable. What bites on macOS instead is the frozen window. `Task.detached` does not detach when
+its closure is written inside a `@MainActor` method under the Swift 5 language mode, so filesystem
+work runs on the main thread with no error and no warning — measured at 1722 of 1722 samples parked
+in `contentsOfDirectory`. Underneath that sits a permission model that denies by hanging: a read of
+a TCC-protected folder blocks inside `open(2)` and never returns, so there is nothing to catch. The
+workflow pairs the `swiftc -typecheck` sweep with `sample <pid>` as the cheap proof that the main
+thread is free, and carries the permission keys, the signing rules that make grants evaporate on
+every ad-hoc rebuild, and the native-app expectations an iOS habit skips.
 
 `context-optimise` installs a five-layer context stack in a repository so later agent sessions
 there start with more signal and fewer wasted tokens: a `PROJECT_INDEX.json` structural map loaded

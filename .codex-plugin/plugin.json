@@ -1,7 +1,7 @@
 {
   "name": "agent-skills",
   "version": "1.4.0",
-  "description": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, Kubernetes platform audit, tvOS SwiftUI, and context optimisation workflows for MagmaMoose agents.",
+  "description": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, Kubernetes platform audit, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for MagmaMoose agents.",
   "author": {
     "name": "Caleb Sargeant",
     "email": "caleb@magmamoose.com",
@@ -21,6 +21,8 @@
     "platform-audit",
     "sre",
     "tvos",
+    "appkit",
+    "macos",
     "swiftui",
     "context-engineering",
     "claude-md",
@@ -29,8 +31,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "MagmaMoose Agent Skills",
-    "shortDescription": "Shared PR review, triage, post-gate security review, post-gate quality review, docs sync, Kubernetes audit, tvOS SwiftUI, and context optimisation workflows.",
-    "longDescription": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, Kubernetes platform audit, tvOS SwiftUI, and context optimisation workflows for MagmaMoose agents, packaged as reusable Codex skills.",
+    "shortDescription": "Shared PR review, triage, post-gate security review, post-gate quality review, docs sync, Kubernetes audit, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows.",
+    "longDescription": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, Kubernetes platform audit, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for MagmaMoose agents, packaged as reusable Codex skills.",
     "developerName": "MagmaMoose",
     "category": "Productivity",
     "capabilities": [
