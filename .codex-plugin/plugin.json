@@ -1,7 +1,7 @@
 {
   "name": "agent-skills",
   "version": "1.4.0",
-  "description": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, Kubernetes platform audit, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for MagmaMoose agents.",
+  "description": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, Kubernetes platform audit, codebase prune, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for MagmaMoose agents.",
   "author": {
     "name": "Caleb Sargeant",
     "email": "caleb@magmamoose.com",
@@ -20,6 +20,10 @@
     "k8s",
     "platform-audit",
     "sre",
+    "codebase-prune",
+    "dead-code",
+    "refactoring",
+    "tech-debt",
     "tvos",
     "appkit",
     "macos",
@@ -31,8 +35,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "MagmaMoose Agent Skills",
-    "shortDescription": "Shared PR review, triage, post-gate security review, post-gate quality review, docs sync, Kubernetes audit, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows.",
-    "longDescription": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, Kubernetes platform audit, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for MagmaMoose agents, packaged as reusable Codex skills.",
+    "shortDescription": "Shared PR review, triage, post-gate security review, post-gate quality review, docs sync, Kubernetes audit, codebase prune, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows.",
+    "longDescription": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, Kubernetes platform audit, codebase prune, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for MagmaMoose agents, packaged as reusable Codex skills.",
     "developerName": "MagmaMoose",
     "category": "Productivity",
     "capabilities": [
@@ -47,6 +51,7 @@
       "Use the brimyr-quality-review skill on PR 123.",
       "Use the docs-update skill to sync ./docs with the code.",
       "Use the k8s-audit skill to audit the production cluster.",
+      "Use the codebase-prune skill on this repo.",
       "Use the swiftui-build skill on issue 42.",
       "Use the context-optimise skill to set up the context stack in this repo."
     ]

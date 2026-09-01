@@ -9,7 +9,7 @@
     {
       "name": "claude-skills",
       "source": "./",
-      "description": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, Kubernetes platform audit, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for Claude Code. The claude-skills name is kept to preserve slash commands.",
+      "description": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, Kubernetes platform audit, codebase prune, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for Claude Code. The claude-skills name is kept to preserve slash commands.",
       "version": "0.5.0"
     }
   ]
