@@ -2,7 +2,7 @@
 
 Shared agent workflows for the MagmaMoose stack, packaged for Claude Code and Codex.
 
-This repository keeps one source of truth for PR review, PR triage, post-gate security and quality review, documentation sync, Kubernetes platform audit, tvOS SwiftUI, and context optimisation work. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
+This repository keeps one source of truth for PR review, PR triage, post-gate security and quality review, documentation sync, Kubernetes platform audit, codebase prune, tvOS SwiftUI, and context optimisation work. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
 
 Do not fork these workflows per project. Put project-specific rules in the target repository's `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, or relevant `README.md` files. The adapters instruct agents to read those files before acting and to treat explicit hard rules as blockers.
 
@@ -18,6 +18,7 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | Brimyr quality review | `/claude-skills:brimyr-quality-review` | `brimyr-quality-review` |
 | Docs sync | `/claude-skills:docs-update` | `docs-update` |
 | Kubernetes audit | `/claude-skills:k8s-audit` | `k8s-audit` |
+| Codebase prune | `/claude-skills:codebase-prune` | `codebase-prune` |
 | tvOS SwiftUI | `/claude-skills:swiftui-build` | `swiftui-build` |
 | macOS SwiftUI | `/claude-skills:macos-swiftui` | `macos-swiftui` |
 | Context stack | `/claude-skills:context-optimise` | `context-optimise` |
@@ -72,6 +73,29 @@ workflow pairs the `swiftc -typecheck` sweep with `sample <pid>` as the cheap pr
 thread is free, and carries the permission keys, the signing rules that make grants evaporate on
 every ad-hoc rebuild, and the native-app expectations an iOS habit skips.
 
+`codebase-prune` reduces the amount of code a maintainer has to hold in their head, in a repository
+that has accumulated years of it, without changing what the software does. It is built on the rule
+every cleanup gets wrong: **"unused" is a hypothesis, not a finding.** A dead-code tool only answers
+"is this reachable from the entrypoints I was told about, through the edges I can see", and in a
+legacy repo both halves are wrong. The entrypoint list misses cron entries, queue consumers, webhook
+targets, Dockerfile `CMD` and CI-only scripts; the edges are invisible wherever the system dispatches
+on strings, which is every DI container, decorator, dynamic import, ORM hook and handler name stored
+in a database. So tool output is a candidate list, and every candidate climbs an evidence ladder,
+from the compiler through a full-text sweep of *every* tracked file to git history and external
+consumers, before anything is deleted. The run is judged on its false-positive rate rather than its
+coverage, because four wrong findings out of thirty means nobody reads the other twenty-six and the
+real dead code then survives forever.
+
+Its highest-value output is not a deletion at all. `wiring-bug` is the verdict for code that was
+*meant* to be reachable and is not: a route never registered, a flag branch that can never be true,
+an authorisation check nothing calls. Those are bugs, sometimes vulnerabilities, and they only turn
+up because someone went looking for dead code. The workflow also refuses the usual scoreboard: lines
+deleted is never the headline, because deleting a test file wins on that metric and collapsing a
+four-file indirection chain into one direct call often adds lines while being worth far more. It
+reports hop chains per flow instead, carries the list of abstractions it deliberately did **not**
+collapse (test seams, vendor boundaries, security boundaries), and ships everything as ranked,
+independently revertible slices with the restore recipe in each commit body.
+
 `context-optimise` installs a five-layer context stack in a repository so later agent sessions
 there start with more signal and fewer wasted tokens: a `PROJECT_INDEX.json` structural map loaded
 on demand, a `CLAUDE.md` tier held under a measured token budget, noise and access control that
@@ -115,6 +139,7 @@ Invoke the Claude commands with:
 /claude-skills:brimyr-quality-review 123
 /claude-skills:docs-update
 /claude-skills:k8s-audit
+/claude-skills:codebase-prune
 /claude-skills:swiftui-build 42
 /claude-skills:context-optimise
 ```
@@ -151,6 +176,7 @@ Use the chargate-security-review skill on PR 123.
 Use the brimyr-quality-review skill on PR 123.
 Use the docs-update skill to sync ./docs with the code.
 Use the k8s-audit skill to audit the production cluster.
+Use the codebase-prune skill on this repo.
 Use the swiftui-build skill on issue 42.
 Use the context-optimise skill to set up the context stack in this repo.
 ```
@@ -196,6 +222,21 @@ fatal, and secret values are never harvested.
 
 ```bash
 scripts/k8s-harvest.sh <kube-context> ./harvest/prod
+```
+
+`scripts/cruft-harvest.sh` does the evidence half of `codebase-prune`: one read-only dump of a
+repository to files, covering the inventory and entrypoint set, churn and the date each file was
+last touched, unused dependencies and unreferenced symbols from whichever analysers are installed,
+duplication and complexity, TODO and commented-out-code markers, skipped tests and tests that assert
+nothing, env vars read but never declared (and declared but never read), feature-flag references,
+a public-symbol snapshot to diff after the prune, and committed build artefacts. The file universe
+is `git ls-files`, so `.gitignore`, vendored trees and build output are excluded for free. It never
+writes inside the repo, never installs anything, and never runs a `--fix`; a missing tool is
+recorded in `90-tooling.txt` rather than being fatal, because which dimensions had a real analyser
+and which had only grep is itself a finding.
+
+```bash
+scripts/cruft-harvest.sh . ./harvest/cruft
 ```
 
 ## License
