@@ -71,8 +71,8 @@ scripts/cruft-harvest.sh . ./harvest/cruft
   Moving files destroys `git log --follow` and conflicts with every open PR.
 - **Never install anything** into the target repo, edit a lockfile by hand, rewrite history, or
   force-push. Report the install command instead.
-- **Never run a `--fix`, formatter or codemod** outside tier 0, on a dirty tree, or without reading
-  the resulting diff.
+- **Never run a `--fix`, formatter or codemod** outside tier 0, on a dirty tree, without reading the
+  resulting diff, or outside its own dedicated commit.
 - **Never claim a dimension is clean** when its tool was missing. Say it was covered by grep only.
 - **Never invent** a path, symbol, tool flag or count.
 - **Never inflate severity**, and name what is genuinely well-kept. A report that is all criticism

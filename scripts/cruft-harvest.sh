@@ -253,12 +253,11 @@ fi
 # 08 - the grep tier: markers a tool will not find
 # ---------------------------------------------------------------------------
 {
-  echo "### TODO / FIXME / HACK / XXX / DEPRECATED"
-  git grep -nE '(TODO|FIXME|HACK|XXX|DEPRECATED|@deprecated)' 2>/dev/null \
-    | grep -vE '/(node_modules|vendor|\.venv)/' | head -200
+  echo "### TODO / FIXME / HACK / XXX / DEPRECATED" # DevSkim: ignore DS176209
+  git grep -nE '(TODO|FIXME|HACK|XXX|DEPRECATED|@deprecated)' 2>/dev/null | grep -vE '/(node_modules|vendor|\.venv)/' | head -200 # DevSkim: ignore DS176209
   echo
   echo "### counts by marker"
-  git grep -ohE '(TODO|FIXME|HACK|XXX|DEPRECATED)' 2>/dev/null | sort | uniq -c | sort -rn
+  git grep -ohE '(TODO|FIXME|HACK|XXX|DEPRECATED)' 2>/dev/null | sort | uniq -c | sort -rn # DevSkim: ignore DS176209
 } >"$OUT/08-todos.txt" 2>&1
 
 {
@@ -277,9 +276,9 @@ fi
     | grep -vE '/(node_modules|vendor)/' | head -120
   echo
   echo "### test files that assert nothing (no assert/expect/should token at all)"
-  for f in $(grep -iE '(^|/)(test|tests|spec|__tests__)/|(_test|\.test|\.spec|Test|Tests)\.' "$TMP/source" | head -400); do
+  while IFS= read -r f; do
     grep -qiE '(assert|expect|should|XCTAssert|verify\()' "$f" 2>/dev/null || echo "  $f"
-  done
+  done < <(grep -iE '(^|/)(test|tests|spec|__tests__)/|(_test|\.test|\.spec|Test|Tests)\.' "$TMP/source" | head -400)
 } >"$OUT/08-tests.txt" 2>&1
 
 # ---------------------------------------------------------------------------
