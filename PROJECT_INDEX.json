@@ -1,0 +1,127 @@
+{
+  "generated": "2026-09-02",
+  "summary": "Shared agent workflows for Claude Code and Codex, covering PR review, PR triage, post-gate security and quality review, documentation sync, Kubernetes platform audit, codebase prune, tvOS SwiftUI, macOS SwiftUI, and context optimisation. Canonical logic lives in shared/; commands/ and skills/ are thin adapters for their respective platforms. Scripts provide standalone harvesters and payload builders used by the heavier workflows.",
+  "entrypoints": [
+    "commands/{workflow}.md: Claude Code slash command, invoked as /claude-skills:{workflow}",
+    "skills/{workflow}/SKILL.md: Codex skill, invoked by skill name",
+    "scripts/build-review-payload.py: standalone payload builder for pr-review",
+    "scripts/docs-audit.py: standalone docs auditor for docs-update",
+    "scripts/k8s-harvest.sh: standalone cluster harvester for k8s-audit",
+    "scripts/cruft-harvest.sh: standalone repo harvester for codebase-prune"
+  ],
+  "modules": {
+    "shared": {
+      "path": "shared/",
+      "purpose": "Canonical workflow logic. Authoritative source for both platforms. Edit here first.",
+      "exports": [
+        "pr-review.md",
+        "pr-triage.md",
+        "chargate-security-review.md",
+        "brimyr-quality-review.md",
+        "docs-update.md",
+        "k8s-audit.md",
+        "codebase-prune.md",
+        "context-optimise.md",
+        "swiftui-build.md",
+        "macos-swiftui.md"
+      ],
+      "depends_on": []
+    },
+    "commands": {
+      "path": "commands/",
+      "purpose": "Claude Code slash command adapters (namespace: claude-skills). Each file delegates to shared/. Two deprecated aliases forward to renamed workflows.",
+      "exports": [
+        "pr-review.md", "pr-triage.md", "chargate-security-review.md",
+        "brimyr-quality-review.md", "docs-update.md", "k8s-audit.md",
+        "codebase-prune.md", "context-optimise.md", "swiftui-build.md", "macos-swiftui.md",
+        "tvos-swiftui.md (deprecated -> swiftui-build)",
+        "update-docs.md (deprecated -> docs-update)"
+      ],
+      "depends_on": ["shared"]
+    },
+    "skills": {
+      "path": "skills/",
+      "purpose": "Codex skill adapters. Each subdirectory contains SKILL.md delegating to shared/.",
+      "exports": [
+        "pr-review", "pr-triage", "chargate-security-review",
+        "brimyr-quality-review", "docs-update", "k8s-audit",
+        "codebase-prune", "context-optimise", "swiftui-build", "macos-swiftui"
+      ],
+      "depends_on": ["shared"]
+    },
+    "scripts": {
+      "path": "scripts/",
+      "purpose": "Standalone harvesters and payload builders. Stdlib-only Python 3; no pip install required. Never writes inside the target repo; never installs anything.",
+      "exports": [
+        "build-review-payload.py: assembles GitHub review payload for pr-review (optional; pr-review falls back if missing)",
+        "docs-audit.py: mechanical docs audit for docs-update",
+        "k8s-harvest.sh: read-only cluster dump for k8s-audit; never harvests secret values",
+        "cruft-harvest.sh: read-only repo dump for codebase-prune; universe is git ls-files"
+      ],
+      "depends_on": []
+    },
+    "claude-plugin": {
+      "path": ".claude-plugin/",
+      "purpose": "Claude Code plugin manifests. marketplace.json for registry; plugin.json defines the claude-skills plugin (version 0.5.0). Namespace stays claude-skills for backward compatibility.",
+      "exports": ["marketplace.json", "plugin.json"],
+      "depends_on": []
+    },
+    "codex-plugin": {
+      "path": ".codex-plugin/",
+      "purpose": "Codex plugin manifest. plugin.json defines the agent-skills Codex plugin (version 1.4.0).",
+      "exports": ["plugin.json"],
+      "depends_on": []
+    },
+    "agents-plugins": {
+      "path": ".agents/plugins/",
+      "purpose": "Codex marketplace reference.",
+      "exports": ["marketplace.json"],
+      "depends_on": []
+    }
+  },
+  "callgraph_highlights": [
+    {
+      "caller": "commands/pr-review.md",
+      "calls": ["shared/pr-review.md"],
+      "note": "shared/pr-review.md optionally uses scripts/build-review-payload.py; falls back to hand-written payload when missing"
+    },
+    {
+      "caller": "commands/docs-update.md",
+      "calls": ["shared/docs-update.md"],
+      "note": "shared/docs-update.md uses scripts/docs-audit.py for the mechanical audit half"
+    },
+    {
+      "caller": "commands/k8s-audit.md",
+      "calls": ["shared/k8s-audit.md"],
+      "note": "shared/k8s-audit.md uses scripts/k8s-harvest.sh for the single read-only cluster harvest"
+    },
+    {
+      "caller": "commands/codebase-prune.md",
+      "calls": ["shared/codebase-prune.md"],
+      "note": "shared/codebase-prune.md uses scripts/cruft-harvest.sh for the read-only repo dump"
+    },
+    {
+      "caller": "skills/{workflow}/SKILL.md",
+      "calls": ["shared/{workflow}.md"],
+      "note": "All Codex skills follow the same delegation pattern as their commands/ counterparts"
+    }
+  ],
+  "hotspots": [
+    "shared/brimyr-quality-review.md",
+    "shared/pr-triage.md",
+    "shared/chargate-security-review.md",
+    "shared/codebase-prune.md",
+    "commands/codebase-prune.md",
+    "skills/codebase-prune/SKILL.md",
+    ".claude-plugin/plugin.json",
+    ".codex-plugin/plugin.json"
+  ],
+  "conventions": {
+    "naming": "Workflows follow {noun}-{verb}. New workflows must be complete across all three layers: shared/, commands/, skills/.",
+    "backwards_compat": "Claude command namespace stays claude-skills. Do not change.",
+    "deprecated_aliases": "tvos-swiftui -> swiftui-build, update-docs -> docs-update. Forward only; will be removed in a future release.",
+    "scripts": "Stdlib-only Python 3. Never add pip or external dependencies.",
+    "idempotent": "All workflows are idempotent. Second run merges, does not duplicate or clobber.",
+    "plugin_versions": "Claude plugin and Codex plugin have separate version numbers. Bump both on release."
+  }
+}
