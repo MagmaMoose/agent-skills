@@ -1,7 +1,7 @@
 {
   "name": "agent-skills",
-  "version": "1.4.0",
-  "description": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, Kubernetes platform audit, codebase prune, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for MagmaMoose agents.",
+  "version": "1.5.0",
+  "description": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, Kubernetes platform audit, codebase prune, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for MagmaMoose agents.",
   "author": {
     "name": "Caleb Sargeant",
     "email": "caleb@magmamoose.com",
@@ -28,6 +28,9 @@
     "appkit",
     "macos",
     "swiftui",
+    "mikrotik",
+    "routeros",
+    "networking",
     "context-engineering",
     "claude-md",
     "automation"
@@ -35,8 +38,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "MagmaMoose Agent Skills",
-    "shortDescription": "Shared PR review, triage, post-gate security review, post-gate quality review, docs sync, Kubernetes audit, codebase prune, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows.",
-    "longDescription": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, Kubernetes platform audit, codebase prune, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for MagmaMoose agents, packaged as reusable Codex skills.",
+    "shortDescription": "Shared PR review, triage, post-gate security review, post-gate quality review, docs sync, Kubernetes audit, codebase prune, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows.",
+    "longDescription": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, Kubernetes platform audit, codebase prune, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for MagmaMoose agents, packaged as reusable Codex skills.",
     "developerName": "MagmaMoose",
     "category": "Productivity",
     "capabilities": [
@@ -53,7 +56,8 @@
       "Use the k8s-audit skill to audit the production cluster.",
       "Use the codebase-prune skill on this repo.",
       "Use the swiftui-build skill on issue 42.",
-      "Use the context-optimise skill to set up the context stack in this repo."
+      "Use the context-optimise skill to set up the context stack in this repo.",
+      "Use the mikrotik-routeros skill to review a script that configures a RouterOS device."
     ]
   }
 }

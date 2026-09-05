@@ -22,6 +22,7 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | tvOS SwiftUI | `/claude-skills:swiftui-build` | `swiftui-build` |
 | macOS SwiftUI | `/claude-skills:macos-swiftui` | `macos-swiftui` |
 | Context stack | `/claude-skills:context-optimise` | `context-optimise` |
+| MikroTik RouterOS | `/claude-skills:mikrotik-routeros` | `mikrotik-routeros` |
 
 `chargate-security-review` runs once the Chargate gate has finished and reviews the same diff Chargate
 just scanned — for the things a scanner structurally cannot find. Chargate matches patterns; this reads the
@@ -61,6 +62,21 @@ not), and lists the merge-ordering hazards among the open remediation PRs.
 against the tvOS SDK that runs in seconds with no simulator: a change gets proven to compile
 instead of asserted. It then covers the quieter tier, where an API compiles on tvOS and no D-pad
 gesture can ever reach it.
+
+`mikrotik-routeros` covers any code that touches a MikroTik router — a script that runs on the
+device, a service that collects from one, a check that scores it, or an operation performed on it.
+It exists because RouterOS punishes plausible guesses in a way that is hard to catch: the scripting
+language returns `nil` rather than raising, so a wrong property name yields an empty string and
+reads as "the device did not report that"; `/tool fetch` truncates at 64 KB, and at 4 KB for a
+response read on RouterOS 6; concatenating an array-valued property with `.` distributes across the
+elements instead of joining, silently corrupting whatever payload was being built; and
+`check-certificate` defaults to `no`, so a fetch that omits it hands its bearer token to whoever
+answers. The reference was researched against MikroTik's own documentation and changelogs and then
+independently fact-checked, which found roughly one claim in four to be wrong — invented property
+names, invented command flags, version gates with nothing behind them — all of them plausible
+enough to ship. Those corrections are inline. The skill also carries the rules that keep a remote
+router reachable: every mutating command gets a lockout rating, the commit-confirm pattern is
+preferred over an instruction to be careful, and nothing the network sends is ever executed.
 
 `macos-swiftui` covers changes to a macOS SwiftUI target, and exists because the tvOS workflow's
 hard-won rules are the wrong ones here: there is no focus engine, and almost nothing is
