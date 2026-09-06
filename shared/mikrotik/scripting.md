@@ -111,6 +111,34 @@ Source: https://manual.mikrotik.com/docs/developer-guides/scripting/scripting-ti
 Source: https://manual.mikrotik.com/docs/developer-guides/scripting/scripting-tips-and-tricks/
 
 
+### A menu's SHAPE can change between RouterOS lines, and `find` is not universal
+
+`find` is a list-menu command. A settings menu — one that holds properties rather than items — does not have it, and a menu can be a settings menu on one RouterOS line and a list menu on the next. `/system health` is the documented case: RouterOS 7 prints it as rows with `NAME`, `VALUE` and `TYPE` columns, while RouterOS 6 prints it as flat properties (`voltage`, `temperature`, `cpu-temperature`, …) whose exact set is per-model.
+
+`print` and `get` exist on every menu. `:foreach k,v in=[... print as-value]` then reads both shapes with one loop: on the list form the key is a row index and the value is that row's array, and on the settings form the key IS the property name — so no list of expected property names has to be maintained, which matters when the set differs per model.
+
+
+```routeros
+:local n 0
+:do {
+  :foreach k,v in=[/system health print as-value] do={
+    :if ([:typeof $v] = "array") do={
+      :put ("$n " . [:tostr ($v->"name")] . "=" . [:tostr ($v->"value")] . [:tostr ($v->"type")])
+    } else={
+      :put ("$n " . [:tostr $k] . "=" . [:tostr $v])
+    }
+    :set n ($n + 1)
+  }
+} on-error={ :do { :foreach k,v in=[/system health get] do={ :put ("$k=$v") } } on-error={} }
+```
+
+
+**Danger.** Calling a command a menu does not have fails the way referencing an absent menu does: it takes down the WHOLE script, not the one line, and wrapping it in `:do ... on-error` does not save you. So a `find` written against the RouterOS 7 shape stops every RouterOS 6 device in the fleet from running the script at all — and because that script is usually what reports in, the symptom is silence rather than an error. Reach a shape-varying menu only through `print` and `get`.
+
+
+Source: https://manual.mikrotik.com/docs/diagnostics-monitoring-and-troubleshooting/health
+
+
 ### where clauses fail silently on type mismatch (the ip-prefix trap)
 
 The console converts types aggressively but not always successfully, and a failed comparison produces an EMPTY result set, not an error. Documented example: `/ip/address/print where address=111.111.1.1/24` returns nothing even though that address exists, because `[:typeof ([print as-value]->0->"address")]` is `str` and the literal `111.111.1.1/24` is parsed as `ip-prefix`. Two documented fixes: `print where address=[:tostr 111.111.1.1/24]` or quote the literal `print where address="111.111.1.1/24"`. When the value comes from a variable, either convert with `:tostr` or interpolate into a string: `"$myVar"`.
