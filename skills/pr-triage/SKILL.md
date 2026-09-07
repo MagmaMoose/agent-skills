@@ -40,6 +40,9 @@ When a security scanner flags a false positive on a PR that blocks merge:
    - `# kics-ignore` (KICS) — simpler inline fallback, place on the flagged
      line: `- secretKey: FOO  # kics-ignore`
    - `// nosemgrep: <rule-id>` (Semgrep)
+   - `DevSkim: ignore <rule-id>` (DevSkim) — in a comment **on the flagged line
+     itself**, not the line above. Splitting a long sentence so the suppression
+     lands on the right line is normal.
    - `# nosec` (Bandit)
    - Inline `# trunk-ignore(<linter>/<rule>)` (Trunk)
    - Check the target repo's existing suppressions (grep for `disable=`,
@@ -70,7 +73,13 @@ call. Always fix or suppress inline.
    priority. A failing security gate means you MUST change code (fix or suppress).
 3. **Decide whether each thread requires a code change, a reply, or no action.**
    Threads from CI-bot findings that block merge ALWAYS require a code change
-   (fix or inline suppression).
+   (fix or inline suppression) — **unless the finding is about a commit that is no
+   longer the head.** A gate re-derives its findings from scratch every run, so a run
+   that was not cancelled when you pushed finishes minutes later and comments on the
+   OLD SHA, still labelled "net-new". Compare the thread's `originalCommit.oid` with
+   `gh pr view <PR> --json headRefOid`; if they differ, leave the thread alone
+   entirely. `isOutdated` does not catch it, because GitHub still maps the thread onto
+   a live line. Judge a gate by its status on the HEAD, never by a thread.
 4. **Make safe code changes where appropriate.** Commit and push them.
 5. **Verify CI** — after pushing fixes, check that the failing check turns green.
 6. **Reply clearly to each addressed thread** with the commit SHA and what was done.

@@ -144,7 +144,7 @@ query($owner:String!, $repo:String!, $pr:Int!, $endCursor:String) {
           line
           originalLine
           comments(first:50) {
-            nodes { author { login } body diffHunk path line }
+            nodes { author { login } body diffHunk path line originalCommit { oid } }
           }
         }
       }
@@ -323,7 +323,9 @@ fail silently.
 otherwise skip. (`gh api repos/$OWNER/$REPO/dependabot/alerts`.)
 
 Build a single triage list. For each item record: source, file:line, what it's
-asking for, and — for review threads — the **thread `id`** and `isResolved`. For an agentic
+asking for, and — for review threads — the **thread `id`**, `isResolved`, and the
+`originalCommit.oid` of its FIRST comment (the commit that comment was written against;
+step 2 needs it). For an agentic
 finding from (c2) there is no thread, so record the **comment `id`** and the **finding `id`**
 instead: those two are what you cite when you answer it.
 
@@ -333,6 +335,18 @@ instead: those two are what you cite when you answer it.
 
 Skip a thread (do **not** fix/resolve it) when:
 - `isResolved` is already `true`.
+- It is a **scanner's finding about a commit that is no longer the head**. A gate
+  re-derives its findings from scratch every run, so its inline comment is a statement
+  about the ONE commit it scanned. A run that was not cancelled when you pushed finishes
+  minutes later and comments on the OLD SHA, still labelled "net-new". Compare the
+  thread's `originalCommit.oid` with `gh pr view <PR> --json headRefOid`; if they differ
+  and the author is a bot, leave it alone entirely — do not fix, do not reply, do not
+  resolve. `isOutdated` does NOT catch this: GitHub still maps the thread onto a live
+  line, so it renders as current. On MagmaMoose/dunmir#157 this cost two full rounds of
+  re-fixing a line that was already correct, each push superseding the next scan. This
+  does not let you ignore a red gate: §2a's authoritative list comes from the summary
+  comment or SARIF **of the current head**, which is exactly the thing a stale thread
+  is not.
 - It's pure praise, a question with no code change requested, or already addressed
   by an existing commit on the branch.
 - Acting on it would contradict this repo's `CLAUDE.md` hard rules or change intent
@@ -685,6 +699,16 @@ mutation($threadId:ID!) {
   resolveReviewThread(input:{threadId:$threadId}) { thread { id isResolved } }
 }' -f threadId="$THREAD_ID"
 ```
+
+**One reply, in the thread, or none at all.** Post the reply ONCE. Before you write it,
+re-read the thread's comments: if a reply of yours is already there, you have already
+answered it — resolve and move on. If `addPullRequestReviewThreadReply` fails because the
+thread is gone, that IS the answer: scanners delete and re-post their inline comments on
+every run, so there is nobody left to tell. Note it in your summary and move on. Do **not**
+fall back to `POST /repos/$OWNER/$REPO/pulls/$PR/comments` — that opens a NEW thread on the
+same line, and then the reply mutation lands on the thread you just created: two identical
+comments seconds apart, neither attached to the finding anyone was reading
+(MagmaMoose/dunmir#157).
 
 For feedback that isn't a review thread (PR-level review body, issue comment, GHAS
 alert) there's no thread to resolve — instead leave **one** top-level PR comment
