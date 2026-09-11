@@ -1,7 +1,7 @@
 ---
 description: Draw an architecture diagram that is verified against the live system, iterated against its own screenshots, and committed as editable Excalidraw source plus the explanation underneath
 argument-hint: "[what to diagram - a system, a repo, a flow, or empty for the repo you are in]"
-allowed-tools: Bash(npx:*), Bash(kubectl:*), Bash(flux:*), Bash(helm:*), Bash(kustomize:*), Bash(jq:*), Bash(yq:*), Bash(git:*), Bash(gh:*), Bash(rg:*), Bash(grep:*), Bash(fd:*), Bash(find:*), Bash(ls:*), Bash(python3:*), Bash(node:*), Bash(bash:*), Read, Write, Edit, Grep, Glob, WebSearch, WebFetch
+allowed-tools: Bash(npx:*), Bash(kubectl:*), Bash(flux:*), Bash(helm:*), Bash(kustomize:*), Bash(jq:*), Bash(yq:*), Bash(git:*), Bash(gh:*), Bash(rg:*), Bash(grep:*), Bash(fd:*), Bash(find:*), Bash(ls:*), Bash(python3:*), Bash(node:*), Read, Write, Edit, Grep, Glob, WebSearch, WebFetch
 ---
 
 Draw an architecture diagram using the shared MagmaMoose diagram workflow.
