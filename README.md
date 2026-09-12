@@ -2,7 +2,7 @@
 
 Shared agent workflows for the MagmaMoose stack, packaged for Claude Code and Codex.
 
-This repository keeps one source of truth for PR review, PR triage, post-gate security and quality review, documentation sync, Kubernetes platform audit, codebase prune, tvOS SwiftUI, and context optimisation work. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
+This repository keeps one source of truth for PR review, PR triage, post-gate security and quality review, documentation sync, Kubernetes platform audit, codebase prune, architecture diagrams, tvOS SwiftUI, and context optimisation work. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
 
 Do not fork these workflows per project. Put project-specific rules in the target repository's `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, or relevant `README.md` files. The adapters instruct agents to read those files before acting and to treat explicit hard rules as blockers.
 
@@ -23,6 +23,7 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | macOS SwiftUI | `/claude-skills:macos-swiftui` | `macos-swiftui` |
 | Context stack | `/claude-skills:context-optimise` | `context-optimise` |
 | MikroTik RouterOS | `/claude-skills:mikrotik-routeros` | `mikrotik-routeros` |
+| Architecture diagram | `/claude-skills:diagram-draw` | `diagram-draw` |
 
 `chargate-security-review` runs once the Chargate gate has finished and reviews the same diff Chargate
 just scanned — for the things a scanner structurally cannot find. Chargate matches patterns; this reads the
