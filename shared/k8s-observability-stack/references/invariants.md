@@ -40,6 +40,11 @@ something else. Say, in this order:
 Example: "I kept thanos-compactor at 1 replica. Two compactors on one bucket compact and delete
 the same blocks, which corrupts history (invariant 1). Its downtime does not affect queries."
 
+Refuse a history-sized PersistentVolume the same way. It is not an invariant (nothing breaks), but
+`storage-model.md` treats it as an error: say the retention belongs in object storage, give the
+working-state size you generated, and point at the compactor retention that delivers what they
+asked for.
+
 ## 1. Thanos compactor is a singleton per bucket
 
 **Rule.** Exactly one compactor per bucket. A StatefulSet with `replicas: 1`, or a Deployment with
@@ -89,10 +94,10 @@ that a bucket backup or `thanos tools bucket verify` pass should precede enablin
   - **Classic mode:** local compaction off, `--storage.tsdb.min-block-duration=2h` and
     `--storage.tsdb.max-block-duration=2h`. prometheus-operator sets both when the sidecar has an
     object storage config. Plain Prometheus needs the flags.
-  - **Delayed compaction:** recent prometheus-operator releases (0.94 at the time of writing), with
-    Prometheus 3.9 or later and a sidecar 0.42 or later, keep local compaction on and make
-    Prometheus wait for the sidecar's upload marker. `spec.disableCompaction: true` forces classic
-    mode.
+  - **Delayed compaction:** prometheus-operator introduced it in 0.93 and 0.94 raised the sidecar
+    floor to 0.42. With Prometheus 3.9 or later and a matching sidecar, the operator keeps local
+    compaction on and makes Prometheus wait for the sidecar's upload marker. It is the operator's
+    default in those conditions. `spec.disableCompaction: true` forces classic mode.
 - The operator decides between the two from `spec.thanos.version`, **not** from the sidecar image
   tag, and that field defaults to the operator's own default Thanos version. Always set
   `thanos.version` to the tag of `thanos.image`. An older sidecar image with an unset version gets
@@ -329,3 +334,4 @@ hand-off.
 | 14 | Ruler and Prometheus rule selectors that overlap |
 | 15 | Tail sampling with more than one gateway replica and no `load_balancing` exporter in front |
 | 16 | `file_log` (or `filelog`) enabled while another collector tails the same files |
+| PV | Any PV sized for retention rather than working state (`storage-model.md`) |

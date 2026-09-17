@@ -1,9 +1,18 @@
 # Backends
 
-Object storage and notification sinks plug into a fixed architecture. Changing either changes
-exactly two things: the storage config block of each consumer (Thanos, Loki, Tempo), and the
-Alertmanager receiver block. Nothing else moves: not the components, not the routing tree, not the
-invariants.
+Object storage and notification sinks plug into a fixed architecture: the components, the routing
+tree and the invariants stay the same. What does change with the backend:
+
+- the storage config block of each consumer (Thanos, Loki, Tempo);
+- Loki's `schemaConfig` `object_store` and the compactor's `delete_request_store` (`azure`, `s3`,
+  `gcs`);
+- the credential wiring: a Secret with keys (and the environment variables or `objstore.yml` built
+  from it), or workload identity on the ServiceAccount of **every** consumer, listed below;
+- for a sink, the Alertmanager receiver block and the Secret it reads.
+
+Every pod that talks to the bucket needs the credential, whichever way it is delivered: the
+Prometheus pods (sidecar), Thanos Ruler, thanos-store, thanos-compactor, every Loki component, and
+Tempo. thanos-query does not.
 
 Key names below were checked against Thanos 0.42, the grafana-community Loki chart 18.x (Loki 3.7),
 the grafana-community Tempo chart 3.0 (Tempo 3.0) and Alertmanager 0.34, in September 2026. Re-check
@@ -54,9 +63,11 @@ the account is created, so check it before anything else.
 **Auth.**
 
 - **AKS Workload Identity** (preferred): a user-assigned managed identity with the Storage Blob Data
-  Contributor role on the containers, federated to each component's service account. Thanos, with
-  no key and no `user_assigned_id`, uses the Azure default credential chain, which includes workload
-  identity. Loki and Tempo need `use_federated_token: true`.
+  Contributor role on the containers, with a federated credential for each consumer's
+  ServiceAccount. Each of those ServiceAccounts carries the `azure.workload.identity/client-id`
+  annotation and each pod the `azure.workload.identity/use: "true"` label. Thanos, with no key and
+  no `user_assigned_id`, uses the Azure default credential chain, which includes workload identity.
+  Loki and Tempo need `use_federated_token: true`.
 - **Managed identity** on VM-based nodes: `user_assigned_id` (Thanos, Loki, Tempo) or
   `use_managed_identity: true` (Loki, Tempo).
 - **Static**: account name plus account key from a Secret. Clusters outside Azure usually end up
@@ -119,6 +130,16 @@ tempo:
 **Auth.** IRSA or EKS Pod Identity. Thanos picks both up through its default credential chain when
 no keys are set and `aws_sdk_auth` is left false. Loki and Tempo use the AWS SDK default chain when
 no keys are set. Static keys from a Secret otherwise.
+
+- **Which ServiceAccounts:** the role (or Pod Identity association) goes on every consumer's
+  ServiceAccount: Prometheus (for the sidecar) and Thanos Ruler through kube-prometheus-stack's
+  `serviceAccount` values, thanos-store and thanos-compactor (give the raw manifests their own
+  ServiceAccounts), Loki's chart ServiceAccount, and Tempo's.
+- **IAM actions:** at minimum `s3:ListBucket` on the bucket and `s3:GetObject`, `s3:PutObject` and
+  `s3:DeleteObject` on its objects. Check each project's documented policy for the version deployed;
+  some examples add more.
+- With IRSA the `objstore.yml` holds no credential, so it can be a plain Secret or ConfigMap, and
+  Loki and Tempo need no environment variables at all.
 
 **Thanos:**
 

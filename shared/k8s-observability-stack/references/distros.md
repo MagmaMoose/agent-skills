@@ -97,7 +97,38 @@ a second one next to it.
   RBAC `get` on `ksh/metrics` and `kcm/metrics` in the `metrics.eks.amazonaws.com` API group, and a
   scrape config that targets the `default/kubernetes` endpoints over HTTPS with those metrics paths.
   Disable the chart's `kubeScheduler` and `kubeControllerManager` blocks, which look for pods that do
-  not exist, and add the scrape through `additionalScrapeConfigs` if the user wants these metrics.
+  not exist. Unattended, leave these metrics off and say so. If the user wants them, add the RBAC
+  and a scrape through `prometheus.prometheusSpec.additionalScrapeConfigs`:
+
+  ```yaml
+  # ClusterRole bound to the Prometheus ServiceAccount
+  rules:
+    - apiGroups: ["metrics.eks.amazonaws.com"]
+      resources: ["kcm/metrics", "ksh/metrics"]
+      verbs: ["get"]
+  ```
+
+  ```yaml
+  additionalScrapeConfigs:
+    - job_name: kube-scheduler
+      scheme: https
+      metrics_path: /apis/metrics.eks.amazonaws.com/v1/ksh/container/metrics
+      authorization:
+        credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      kubernetes_sd_configs:
+        - role: endpoints
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: default;kubernetes;https
+    - job_name: kube-controller-manager
+      # the same, with metrics_path /apis/metrics.eks.amazonaws.com/v1/kcm/container/metrics
+  ```
+
+  The chart's scheduler and controller-manager alert rules expect their own job names; check the
+  rule expressions against these job names, or disable those rule groups and write your own.
 - etcd is not scrapeable. Disable it. The etcd database size is available from CloudWatch.
 - kube-proxy runs as a DaemonSet. Check `metricsBindAddress` in its config before enabling the
   target.

@@ -34,9 +34,10 @@ Write "None" if there are none.>
 
 ## Before merging
 
+- [ ] Heartbeat endpoint exists and its URL is stored: <path> (invariant 11: without it nothing
+      tells you the alert path is dead)
 - [ ] Secrets created in <secret store>: <path and property for each, from the ExternalSecrets>
 - [ ] Buckets or containers created: <names>
-- [ ] Heartbeat endpoint exists and its URL is stored: <path>
 - [ ] `thanos tools bucket verify` clean against the bucket (required for self-hosted S3)
 - [ ] <Approvals still open, for example the AI triage webhook>
 - [ ] <Anything not verified: live cluster checks, versions, node counts>
@@ -52,7 +53,7 @@ Every PV here is working state. History lives in object storage.
 | thanos-compactor | Scratch for the compaction in progress | Nothing; the compaction restarts |
 | thanos-ruler | Rule results before upload | Recent recording rule results not yet uploaded |
 | alertmanager | Notification log and silences | Silences, and duplicate notifications for a while |
-| loki-write | WAL and unflushed chunks | Unflushed logs on that pod; covered by replication factor 3 |
+| loki-write | WAL and unflushed chunks | Unflushed logs on that pod; covered only when the replication factor (<n>) is above 1 |
 | loki-backend | Compactor working directory, index gateway cache | Nothing; rebuilt |
 | tempo | WAL, head blocks, metrics-generator WAL | Traces not yet flushed to the bucket |
 

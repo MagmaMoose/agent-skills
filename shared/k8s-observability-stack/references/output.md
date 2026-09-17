@@ -134,13 +134,15 @@ Never inline a credential in values, manifests or the README.
 
 ## Plain Helm fallback
 
-Generate one values file per release and this install order. Each step waits for the previous one
-to be Ready.
+Generate one values file per chart release, the raw manifests as plain YAML for `kubectl apply`, and
+this install order as a script or a README section. Each step waits for the previous one to be
+Ready. `helm --wait` does not wait for StatefulSets an operator creates after the release (Prometheus,
+Alertmanager, Thanos Ruler), so follow those with `kubectl rollout status statefulset/<name>`.
 
 1. Namespaces and secrets: object storage credentials, notification sink URLs, the heartbeat URL,
-   Grafana database credentials.
-2. Operators and CRDs: kube-prometheus-stack's CRDs (or the whole chart with its components
-   disabled), CloudNativePG, opentelemetry-operator if used.
+   Grafana admin and database credentials.
+2. Operators and CRDs: the `prometheus-operator-crds` chart (then install kube-prometheus-stack with
+   `crds.enabled: false`), CloudNativePG, opentelemetry-operator if used.
 3. The Postgres cluster for Grafana.
 4. memcached.
 5. kube-prometheus-stack: Prometheus with the sidecar, Alertmanager, kube-state-metrics,
@@ -152,8 +154,10 @@ to be Ready.
 10. The supporting exporters.
 11. The validation checklist.
 
-Each step is `helm upgrade --install <release> <repo>/<chart> --version <exact> --namespace <ns>
---values <file>`.
+Chart steps are `helm upgrade --install <release> <repo>/<chart> --version <exact> --namespace <ns>
+--values <file>`; raw-manifest steps (Thanos, memcached, the event exporter, the Postgres cluster)
+are `kubectl apply -f <file>`. Make the script refuse to run while any `<placeholder>` is left in the
+files.
 
 ## The output README
 
@@ -188,9 +192,10 @@ Include this, adapted to the StorageClass in use. It matters most with node-pinn
    the Prometheus replica is scraping and its sidecar serving, and every stack pod is Ready. One
    node at a time.
 5. If a node is gone for good with node-pinned volumes: delete the stuck pod's PVC, then the pod,
-   so the StatefulSet recreates both elsewhere. Say what that costs per component: a Loki ingester's
-   unflushed WAL (covered by RF 3), a Prometheus replica's not-yet-uploaded blocks (the other
-   replica still has them), Tempo's unflushed head blocks, and nothing for the compactor or store.
+   so the StatefulSet recreates both elsewhere. Say what that costs per component, using the real
+   replication settings: a Loki ingester's unflushed WAL (covered only when the replication factor
+   is above 1), a Prometheus replica's not-yet-uploaded blocks (the other replica still has them),
+   Tempo's unflushed head blocks, and nothing for the compactor or store.
 
 ### Upgrade order
 

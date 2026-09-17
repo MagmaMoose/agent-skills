@@ -34,7 +34,9 @@ tempo:
           endpoint: 0.0.0.0:4317
         http:
           endpoint: 0.0.0.0:4318
-  # RED metrics and service graph into Prometheus, one entry per replica (invariant 13).
+  # RED metrics and service graph into Prometheus, one entry per replica (invariant 13). Pod names
+  # come from the Prometheus resource: with kube-prometheus-stack and `fullnameOverride: prometheus`
+  # they are prometheus-prometheus-prometheus-0 and -1. Check the rendered StatefulSet name.
   metricsGenerator:
     enabled: true
     storage:

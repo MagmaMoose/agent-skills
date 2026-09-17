@@ -75,8 +75,20 @@ Never one question at a time. Only ask what discovery could not answer:
 - GitOps tool (Flux, Argo CD) or direct Helm.
 
 State what you inferred and where from, so the user can correct it in the same reply. If running
-unattended, pick the conservative default for each unknown, record it as an assumption, and put it
-in the output README's "Before merging" list.
+unattended, use these defaults for anything still unknown, record each as an assumption, and put it
+in the output README's "Before merging" list:
+
+| Unknown | Default |
+| --- | --- |
+| StorageClass | The cluster's default class; say whether it is zonal or node-pinned |
+| Dedicated node pool | None; no node selectors |
+| Retention | Metrics raw 30d, 5m 90d, 1h 365d; logs 30d; traces 7d |
+| Heartbeat endpoint | Route and receiver against a placeholder Secret, first item in "Before merging" |
+| GitOps tool | The repository's; plain Helm if it has none |
+| Log collection | On in the node agent, unless another collector already tails container logs (invariant 16) |
+| Control-plane targets | Off, unless the distribution exposes them without node changes (`distros.md`) |
+| AI triage webhook | Off |
+| Ingress for Grafana | None; say how to port-forward |
 
 ### 3. Plan against the invariants
 
@@ -92,8 +104,11 @@ Check the plan against every invariant. Where a request breaks one, follow "How 
 
 Start from `assets/`, follow `references/output.md` for layout and secrets, `references/backends.md`
 for the storage and receiver blocks, `references/distros.md` for control-plane targets and
-`references/correlation.md` for datasources. Only the storage config blocks and the Alertmanager
-receivers change between backends and sinks.
+`references/correlation.md` for datasources. The architecture does not change between backends and
+sinks, but more than one block does: each consumer's storage config, Loki's schema `object_store`
+and compactor `delete_request_store`, the credential wiring (a Secret, or workload identity on every
+consumer's ServiceAccount), and the Alertmanager receiver. `references/backends.md` lists them per
+backend.
 
 ### 5. Validate statically
 

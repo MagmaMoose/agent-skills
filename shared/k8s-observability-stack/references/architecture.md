@@ -81,7 +81,7 @@ than generating it silently.
 
 | Component | Kind | Replicas | Notes |
 | --- | --- | --- | --- |
-| kubernetes-event-exporter | Deployment | 1 | **Single replica.** Leader election is off by default. Invariant 6 |
+| kubernetes-event-exporter | Deployment | 1 | **Single replica.** Leader election is off by default. Invariant 6. Its last release (v1.7) is from February 2024; check the project is alive, or use a single-replica collector with the Kubernetes events or objects receiver instead |
 | x509-certificate-exporter | Deployment | 1 | Plus an optional DaemonSet for certificates on node disks |
 | node-problem-detector | DaemonSet | per node | Kernel and runtime problems as node conditions and metrics |
 
@@ -215,17 +215,33 @@ replica counts changed.
 - Follow the target repository's existing namespaces when it has them. For a greenfield install,
   one `observability` namespace is the default. Splitting per signal (`monitoring`, `logging`,
   `tracing`) is fine but multiplies NetworkPolicies, quotas and Pod Security exemptions.
-- Collectors that tail host log files need `hostPath`, which Pod Security `baseline` forbids. Put
-  the DaemonSet in a namespace that is exempt, or run it under `privileged` for that namespace
-  only, and say which.
-- If the cluster has a dedicated observability node pool, pin every non-DaemonSet component to it
-  with a nodeSelector or node affinity plus a toleration. DaemonSets keep their default tolerations
-  so they still cover every node.
-- Components that call the Kubernetes API need a service account token. Some clusters mutate pods
-  to `automountServiceAccountToken: false` by policy. Set it to `true` explicitly on:
-  otel-collector (`k8s_attributes`), kubernetes-event-exporter, x509-certificate-exporter (Secret
-  watching), node-problem-detector (node conditions), Grafana's dashboard and datasource sidecars,
-  and kube-state-metrics.
+- **Pod Security.** Several node agents need host access that Pod Security `baseline` forbids:
+  node-exporter (host network and PID, host paths), node-problem-detector (privileged, `/dev/kmsg`),
+  the x509 exporter's host-path DaemonSets, and the collector when it tails log files. Run them in a
+  namespace whose Pod Security level allows it (`privileged` for that namespace only), or exempt
+  them explicitly, and say which.
+- **Dedicated node pool.** Pin every non-DaemonSet component to it with a nodeSelector (or node
+  affinity) plus a toleration. Every chart puts the setting somewhere else:
+
+  | Component | Keys |
+  | --- | --- |
+  | kube-prometheus-stack | `prometheus.prometheusSpec`, `alertmanager.alertmanagerSpec`, `thanosRuler.thanosRulerSpec`, `prometheusOperator`, `grafana`, `kube-state-metrics`: each has `nodeSelector` and `tolerations` |
+  | Loki | `defaults.nodeSelector` and `defaults.tolerations` (all Loki components) |
+  | Tempo, OpenTelemetry collector, node-problem-detector | top-level `nodeSelector` and `tolerations` |
+  | x509-certificate-exporter | `secretsExporter.nodeSelector`; per DaemonSet under `hostPathsExporter.daemonSets.<name>` |
+  | Raw manifests (Thanos, memcached, event exporter) | the pod spec |
+
+  Check the keys against the chart version you pin. DaemonSets that must cover every node
+  (node-exporter, node-problem-detector, the log-tailing agent) need tolerations for every taint on
+  those nodes. Some charts ship them (node-exporter tolerates all `NoSchedule` taints by default);
+  the OpenTelemetry collector chart ships none.
+- **API access.** Components that call the Kubernetes API need a service account token:
+  otel-collector (`k8s_attributes`), kubernetes-event-exporter, x509-certificate-exporter's Secrets
+  exporter, node-problem-detector (node conditions), Grafana's dashboard and datasource sidecars,
+  and kube-state-metrics. Some clusters mutate pods to `automountServiceAccountToken: false` unless
+  the pod spec says `true`. Where a chart has no value for the pod field (x509-certificate-exporter
+  4.2 and node-problem-detector 2.4 do not), patch the rendered output: a Flux `postRenderers`
+  kustomize patch, or `helm --post-renderer` for plain Helm.
 
 ## Adapting an existing stack
 

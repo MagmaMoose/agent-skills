@@ -86,10 +86,15 @@ the StatefulSet itself.
 
 ## Storage class choice
 
-- **Network-attached or replicated block storage** (cloud disks, Ceph RBD, Longhorn and similar):
-  pods can move to another node with their volume. Replication inside the storage layer duplicates
-  what Loki, Tempo and the Prometheus pair already replicate, so a single storage replica is often
-  enough for these volumes.
+- **Replicated block storage** (Ceph RBD, Longhorn and similar): pods can move to any node with
+  their volume. Replication inside the storage layer duplicates what Loki, Tempo and the Prometheus
+  pair already replicate, so a single storage replica is often enough for these volumes.
+- **Zonal cloud disks** (AWS EBS, GCE persistent disks, zonal Azure disks): a pod can move with its
+  volume only to another node **in the same zone**. With one node per zone they behave like
+  node-pinned storage, and invariant 10's drain procedure applies. Use a StorageClass with
+  `volumeBindingMode: WaitForFirstConsumer`, and spread replicas across zones with
+  `topologySpreadConstraints` on `topology.kubernetes.io/zone` in addition to the hostname
+  anti-affinity.
 - **Node-pinned storage** (local-path, local PVs, LVM-backed CSI drivers): fastest and cheapest, but
   a pod cannot leave its node. Invariant 10 applies in full, and the output README must carry the
   drain procedure.

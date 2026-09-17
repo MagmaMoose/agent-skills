@@ -154,12 +154,14 @@ datasource in the chart versions checked, so provision that one too (`type: aler
 depend on how logs arrive, so read them from the running Loki (Grafana's label browser, or
 `logcli labels`) instead of guessing:
 
-- **OTLP into Loki:** Loki promotes a default set of resource attributes to index labels, replacing
-  dots with underscores: `service.name` becomes `service_name`, `k8s.namespace.name` becomes
-  `k8s_namespace_name`, and so on.
-- **File tailing agents** (Fluent Bit, Promtail, Alloy, the otel-collector `file_log` receiver) use
-  whatever labels their pipeline sets, often `namespace`, `pod` and `container`, or prefixed variants.
-  Use those names.
+What decides the names is the protocol logs arrive in, not where they were read from:
+
+- **OTLP into Loki**, including container logs the otel-collector tails with `file_log` and enriches
+  with `k8s_attributes`: Loki promotes a default set of resource attributes to index labels,
+  replacing dots with underscores: `service.name` becomes `service_name`, `k8s.namespace.name`
+  becomes `k8s_namespace_name`, and so on.
+- **Loki's push API** from Fluent Bit, Promtail or Alloy's Loki writer: whatever labels that pipeline
+  sets, often `namespace`, `pod` and `container`, or prefixed variants. Use those names.
 
 Filtering by trace ID (`filterByTraceID: true`) only finds lines that carry the trace ID, so pair it
 with at least a namespace or service label to keep the query cheap.

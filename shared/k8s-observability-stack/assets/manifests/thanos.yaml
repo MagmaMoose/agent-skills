@@ -41,6 +41,25 @@ data:
     chunk_subrange_size: 16000
     max_chunks_get_range_requests: 3
 ---
+# ServiceAccounts for the two components that read and write the bucket. With workload identity
+# (IRSA, EKS Pod Identity, Azure or GKE Workload Identity) the role annotation goes here
+# (backends.md). They never call the Kubernetes API, so the token is not mounted.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: thanos-store
+  namespace: <namespace>
+  annotations: {}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: thanos-compactor
+  namespace: <namespace>
+  annotations: {}
+automountServiceAccountToken: false
+---
 # --- thanos-query: 2 replicas, stateless ------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
@@ -173,6 +192,7 @@ spec:
       labels:
         app.kubernetes.io/name: thanos-store
     spec:
+      serviceAccountName: thanos-store
       automountServiceAccountToken: false
       affinity:
         podAntiAffinity:
@@ -301,6 +321,7 @@ spec:
       labels:
         app.kubernetes.io/name: thanos-compactor
     spec:
+      serviceAccountName: thanos-compactor
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true

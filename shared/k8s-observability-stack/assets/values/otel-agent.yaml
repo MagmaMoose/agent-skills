@@ -5,6 +5,7 @@
 # (invariant 15). A starting shape, not a version source. Placeholders look like <this>.
 
 mode: daemonset
+fullnameOverride: otel-agent
 
 image:
   repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-k8s
@@ -14,10 +15,17 @@ command:
 presets:
   kubernetesAttributes:
     enabled: true
-  # Invariant 16: only when no other agent tails container log files on these nodes. Enabling it
-  # needs hostPath mounts, which Pod Security baseline forbids (architecture.md).
+  # Container log collection (file_log receiver). ON by default: without it, and without another
+  # collector, no container log ever reaches Loki. Turn it OFF when another agent already tails
+  # container logs on these nodes (invariant 16). It needs hostPath mounts, which Pod Security
+  # baseline forbids (architecture.md).
   logsCollection:
-    enabled: false
+    enabled: true
+    storeCheckpoints: true
+
+# Cover every node that runs workloads, including tainted ones. The chart ships no tolerations.
+tolerations:
+  - operator: Exists
 
 # Workloads send to the node-local agent, either through this Service (the chart sets
 # internalTrafficPolicy Local for a DaemonSet) or to the node IP on the OTLP hostPorts.
@@ -72,6 +80,7 @@ config:
           - batch
         exporters:
           - load_balancing
+      # The logsCollection preset adds its file_log receiver to this pipeline.
       logs:
         receivers:
           - otlp

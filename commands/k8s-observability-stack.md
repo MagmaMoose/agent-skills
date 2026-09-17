@@ -33,8 +33,9 @@ policies win over the workflow.
   1. One Thanos compactor per bucket. Never scaled for HA.
   2. No offline deduplication or vertical compaction unless explicitly requested, and then only with
      `--deduplication.func=penalty` and an irreversibility warning. Dedup at query time.
-  3. With the Thanos sidecar: Prometheus retention of at least 6h, local compaction off (2h min and
-     max block duration).
+  3. With the Thanos sidecar: Prometheus retention of at least 6h, and local compaction never touching
+     a block before upload (2h min and max block duration, or the operator's delayed compaction),
+     with `thanos.version` equal to the sidecar image tag.
   4. thanos-query finds every StoreAPI through `dnssrv+` against a headless Service.
   5. kube-state-metrics: 1 replica or sharded.
   6. kubernetes-event-exporter: 1 replica and `Recreate`, unless its leader election is on.

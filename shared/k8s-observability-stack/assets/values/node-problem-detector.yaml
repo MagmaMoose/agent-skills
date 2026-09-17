@@ -2,7 +2,8 @@
 # node conditions, events and Prometheus metrics. A starting shape, not a version source.
 
 settings:
-  # The chart default also loads docker-monitor.json, which only applies to Docker runtimes.
+  # Kernel and read-only filesystem monitors, which apply to any node. Add runtime-specific monitors
+  # only if they match the node's container runtime; check the chart's current default list.
   log_monitors:
     - /config/kernel-monitor.json
     - /config/readonly-monitor.json
