@@ -200,7 +200,9 @@ and never reaches step 3. That is the failure this check exists to find.
 | Loki chunk cache writes succeed | no "object too large" or item size errors in loki-write logs (memcached `-I`, invariant 8) |
 | kube-state-metrics not duplicated | `count(count by (instance) (kube_pod_info))` equals the number of kube-state-metrics shards (invariant 5) |
 | Event exporter not duplicated | one pod, and a test event (for example scaling a Deployment) appears once in its sink (invariant 6) |
-| x509 exporter sees certificates | `x509_cert_not_after` has series for the Secrets and host files it watches |
+| x509 exporter sees certificates | `x509_cert_not_after` has series for the Secrets it watches |
+| API server certificates probed (self-managed control planes) | `probe_ssl_earliest_cert_expiry{job="apiserver-tls-probe"}` has one series per `default/kubernetes` endpoint |
+| Ingress policies admit every caller | with the NetworkPolicies applied, `up` is 1 for every stack target, Grafana's Explore returns data from Thanos, Loki and Tempo, and Tempo's span metrics appear in Prometheus |
 | node-problem-detector running on every node | `count(problem_gauge)` or its node condition metrics exist per node |
 | PDBs allow a drain | `kubectl get pdb -n <ns>` shows ALLOWED DISRUPTIONS of at least 1 for every stack PDB when healthy |
 | Grafana is stateless | no PVC bound to Grafana, two replicas Ready, a dashboard change made in git appears in both |

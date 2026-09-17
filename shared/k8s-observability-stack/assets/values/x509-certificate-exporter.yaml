@@ -1,6 +1,14 @@
-# x509-certificate-exporter values (enix chart). One Deployment for certificates in Secrets, plus
-# optional DaemonSets for certificates on node disks. File paths per distribution: distros.md.
+# x509-certificate-exporter values (enix chart): one Deployment for certificates in Secrets.
 # A starting shape, not a version source. Placeholders look like <this>.
+#
+# No host-path DaemonSets. The chart mounts each watched file's parent directory (verified on 4.2.0),
+# and on self-managed control planes those directories hold CA and client private keys and admin
+# kubeconfigs. Check API server certificates over TLS instead: manifests/apiserver-tls-probe.yaml.
+#
+# The Secrets exporter reads Secrets cluster-wide: RBAC cannot filter by Secret type, and the chart
+# renders a ClusterRole even with includeNamespaces, which filters inside the exporter. Say so in the
+# output README, and give the pod an ingress policy that admits only Prometheus (architecture.md,
+# Network access). Where cert-manager issues every certificate, its own metrics may be enough.
 #
 # The chart does not set automountServiceAccountToken on the pod. Where a cluster policy defaults it
 # to false, the Secrets exporter (which reads Secrets through the API) needs it set to true, for
@@ -18,44 +26,6 @@ secretsExporter:
       memory: 32Mi
     limits:
       memory: 150Mi
-
-# Example for k3s, following the exporter's upstream k3s example, which lists certificate FILES
-# rather than watching the TLS directories. Those directories also hold private keys and other
-# non-certificate files, so check the exporter's read-error metrics before switching to directory
-# watches. Remove the whole block on managed control planes.
-hostPathsExporter:
-  daemonSets:
-    server:
-      nodeSelector:
-        node-role.kubernetes.io/control-plane: "true"
-      tolerations:
-        - operator: Exists
-          effect: NoSchedule
-      watchFiles:
-        - /var/lib/rancher/k3s/server/tls/server-ca.crt
-        - /var/lib/rancher/k3s/server/tls/client-ca.crt
-        - /var/lib/rancher/k3s/server/tls/request-header-ca.crt
-        - /var/lib/rancher/k3s/server/tls/serving-kube-apiserver.crt
-        - /var/lib/rancher/k3s/server/tls/client-kube-apiserver.crt
-        - /var/lib/rancher/k3s/server/tls/client-controller.crt
-        - /var/lib/rancher/k3s/server/tls/client-scheduler.crt
-        - /var/lib/rancher/k3s/server/tls/client-kube-proxy.crt
-        # Embedded etcd only.
-        - /var/lib/rancher/k3s/server/tls/etcd/server-ca.crt
-        - /var/lib/rancher/k3s/server/tls/etcd/peer-ca.crt
-        - /var/lib/rancher/k3s/server/tls/etcd/client-ca.crt
-        - /var/lib/rancher/k3s/agent/client-kubelet.crt
-        - /var/lib/rancher/k3s/agent/serving-kubelet.crt
-      watchKubeconfFiles:
-        - /etc/rancher/k3s/k3s.yaml
-    agents:
-      nodeSelector:
-        <worker-node-label>: "<value>"
-      watchFiles:
-        - /var/lib/rancher/k3s/agent/client-kubelet.crt
-        - /var/lib/rancher/k3s/agent/serving-kubelet.crt
-        - /var/lib/rancher/k3s/agent/client-ca.crt
-        - /var/lib/rancher/k3s/agent/server-ca.crt
 
 prometheusServiceMonitor:
   create: true

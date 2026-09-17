@@ -1,0 +1,68 @@
+# API server certificate expiry on every control-plane node, for self-managed distributions (k3s,
+# kubeadm) where no provider renews it. A Probe resource cannot discover the endpoints of
+# default/kubernetes, so this ServiceMonitor sends each one to blackbox-exporter's tls_connect module
+# (values/blackbox-exporter.yaml), giving one probe_ssl_earliest_cert_expiry series per endpoint. An
+# already expired certificate fails the handshake, so it shows as probe_success == 0 instead.
+#
+# Ship both resources the way the target repository ships its other monitors (output.md, CRDs before
+# custom resources). Placeholders look like <this>.
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: apiserver-tls-probe
+  namespace: <namespace>
+spec:
+  namespaceSelector:
+    matchNames:
+      - default
+  selector:
+    matchLabels:
+      component: apiserver
+      provider: kubernetes
+  endpoints:
+    - port: https
+      scheme: http
+      path: /probe
+      params:
+        module:
+          - tls_connect
+      interval: 60s
+      scrapeTimeout: 10s
+      relabelings:
+        - sourceLabels: [__address__]
+          targetLabel: __param_target
+        - sourceLabels: [__param_target]
+          targetLabel: instance
+        - targetLabel: __address__
+          replacement: <blackbox-exporter-service>.<namespace>.svc:9115
+        - targetLabel: job
+          replacement: apiserver-tls-probe
+---
+# Plain annotations, no templates: a repository that renders this file through Helm tpl
+# (kube-prometheus-stack extraManifests) would otherwise eat them.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: apiserver-tls-probe
+  namespace: <namespace>
+spec:
+  groups:
+    - name: apiserver-certificate
+      rules:
+        - alert: APIServerCertificateExpiringSoon
+          expr: probe_ssl_earliest_cert_expiry{job="apiserver-tls-probe"} - time() < 86400 * 28
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: The API server certificate on this instance expires in under 28 days.
+            description: k3s renews it when k3s restarts on that node; kubeadm renews it with kubeadm certs renew.
+        - alert: APIServerTLSProbeFailing
+          expr: probe_success{job="apiserver-tls-probe"} == 0
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: The TLS handshake with the API server on this instance fails.
+            description: An expired or untrusted certificate fails the handshake, so this is how an expired certificate shows.

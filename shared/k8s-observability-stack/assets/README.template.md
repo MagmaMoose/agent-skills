@@ -23,8 +23,14 @@ so here.>
 | grafana | Deployment | 2 | none (Postgres) | | <verified> |
 | memcached | Deployment | 3 | none | | <verified> |
 | kubernetes-event-exporter | Deployment | 1 | none | | <verified> |
-| x509-certificate-exporter | Deployment (+ DaemonSet) | 1 | none | | <verified> |
+| x509-certificate-exporter | Deployment | 1 | none | | <verified> |
 | node-problem-detector | DaemonSet | per node | none | | <verified> |
+
+### Network access
+
+<Which pods have ingress NetworkPolicies and which callers each admits (architecture.md, Namespaces
+and placement), or why there are none (the CNI does not enforce them). A new direct caller needs a
+rule in the same change.>
 
 ### Deviations from the reference architecture
 

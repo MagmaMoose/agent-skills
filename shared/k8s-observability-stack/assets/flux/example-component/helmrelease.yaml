@@ -5,6 +5,11 @@ metadata:
   namespace: <namespace>
 spec:
   interval: 30m
+  # The chart renders a ServiceMonitor, so wait for the release that installs the monitoring CRDs
+  # (output.md, CRDs before custom resources).
+  dependsOn:
+    - name: kube-prometheus-stack
+      namespace: <kube-prometheus-stack-namespace>
   chart:
     spec:
       chart: loki

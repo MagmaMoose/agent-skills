@@ -68,10 +68,16 @@ endpoint per server node:
 - Exposing `0.0.0.0` puts these endpoints on the node network. NetworkPolicy does not cover host
   network ports, so restrict them with the node firewall.
 
-Node certificates for the x509 exporter's DaemonSet on k3s: server certificates under
-`/var/lib/rancher/k3s/server/tls/` (including `etcd/`), kubelet certificates under
-`/var/lib/rancher/k3s/agent/`, and the admin kubeconfig at `/etc/rancher/k3s/k3s.yaml`. The
-x509-certificate-exporter project ships a k3s example values file; start from it.
+Certificates on k3s nodes: do not use the x509 exporter's host-path mode, even with the project's
+k3s example. The chart mounts each watched file's parent directory, and
+`/var/lib/rancher/k3s/server/tls/`, `/var/lib/rancher/k3s/agent/` and `/etc/rancher/k3s/` hold the CA
+and client private keys and the admin kubeconfig. Probe the API server certificate on every server
+node over TLS instead (`assets/manifests/apiserver-tls-probe.yaml`, with the `tls_connect` module
+in `assets/values/blackbox-exporter.yaml`). k3s certificates last 365 days, and k3s renews them only
+when it starts within 120 days of expiry (90 before the May 2025 releases), so the failure this
+catches is a server that is never restarted. Agent certificates are not probed: current k3s posts a
+Warning Event with reason `CertificateExpirationWarning` on the Node 120 days ahead, which the event
+exporter ships to Loki. Say in the output README which of these the cluster has.
 
 ## kubeadm and similar self-managed distributions
 
@@ -81,8 +87,9 @@ The scheduler and controller-manager run as static pods bound to `127.0.0.1`, et
 `metricsBindAddress` in the kube-proxy ConfigMap) or disable them. The same host-network exposure
 warning applies.
 
-Node certificates: `/etc/kubernetes/pki/` and the kubelet certificates under
-`/var/lib/kubelet/pki/`.
+Certificates: as on k3s, use the TLS probe, not host paths. `/etc/kubernetes/pki/` holds the CA
+private keys. kubeadm renews control-plane certificates on `kubeadm upgrade apply` and with
+`kubeadm certs renew`.
 
 For other self-managed distributions (RKE2, Talos, and so on), look up that distribution's own flags
 for exposing control-plane metrics during the run rather than assuming the kubeadm or k3s answer.

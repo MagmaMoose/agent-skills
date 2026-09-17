@@ -32,6 +32,25 @@ config:
     tcp_connect:
       prober: tcp
       timeout: 10s
+    # TLS handshake only, for certificate expiry where an HTTP request would need credentials: the API
+    # server on every control-plane node (manifests/apiserver-tls-probe.yaml). Verified against the
+    # cluster CA, with the server name kube-prometheus-stack's apiserver scrape uses.
+    tls_connect:
+      prober: tcp
+      timeout: 10s
+      tcp:
+        preferred_ip_protocol: ip4
+        tls: true
+        tls_config:
+          ca_file: /etc/kube-root-ca/ca.crt
+          server_name: kubernetes
+
+# Every namespace has the cluster CA in the kube-root-ca.crt ConfigMap.
+extraConfigmapMounts:
+  - name: kube-root-ca
+    mountPath: /etc/kube-root-ca
+    configMap: kube-root-ca.crt
+    readOnly: true
 
 # Probe in-cluster Service DNS names for services inside this cluster. Where hairpin NAT is not
 # supported, pods cannot reach the cluster's own ingress hostnames, and every such probe fails.
