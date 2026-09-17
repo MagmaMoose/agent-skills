@@ -105,16 +105,12 @@ spec:
               topologyKey: kubernetes.io/hostname
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1001
-        runAsGroup: 1001
+        runAsUser: 65534
+        runAsGroup: 65534
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: thanos-query
-          #trivy:ignore:KSV-0125 quay.io/thanos is the official upstream registry for Thanos
-          #trivy:ignore:KSV-0011 CPU limit intentionally omitted — bursty workload, see Deployment annotation
-          #trivy:ignore:KSV-0020 UID 1001 is the Thanos image's built-in user
-          #trivy:ignore:KSV-0021 GID 1001 is the Thanos image's built-in group
           image: quay.io/thanos/thanos:<thanos-version>
           args:
             - query
@@ -142,6 +138,7 @@ spec:
               cpu: 50m
               memory: 256Mi
             limits:
+              cpu: 2000m
               memory: 1Gi
           securityContext:
             allowPrivilegeEscalation: false
@@ -224,17 +221,13 @@ spec:
               topologyKey: kubernetes.io/hostname
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1001
-        runAsGroup: 1001
-        fsGroup: 1001
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: thanos-store
-          #trivy:ignore:KSV-0125 quay.io/thanos is the official upstream registry for Thanos
-          #trivy:ignore:KSV-0011 CPU limit intentionally omitted — bursty workload, see StatefulSet annotation
-          #trivy:ignore:KSV-0020 UID 1001 is the Thanos image's built-in user
-          #trivy:ignore:KSV-0021 GID 1001 is the Thanos image's built-in group
           image: quay.io/thanos/thanos:<thanos-version>
           args:
             - store
@@ -262,6 +255,7 @@ spec:
               cpu: 50m
               memory: 512Mi
             limits:
+              cpu: 4000m
               memory: 2Gi
           securityContext:
             allowPrivilegeEscalation: false
@@ -356,17 +350,13 @@ spec:
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1001
-        runAsGroup: 1001
-        fsGroup: 1001
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: thanos-compactor
-          #trivy:ignore:KSV-0125 quay.io/thanos is the official upstream registry for Thanos
-          #trivy:ignore:KSV-0011 CPU limit intentionally omitted — compaction is CPU-bursty, see StatefulSet annotation
-          #trivy:ignore:KSV-0020 UID 1001 is the Thanos image's built-in user
-          #trivy:ignore:KSV-0021 GID 1001 is the Thanos image's built-in group
           image: quay.io/thanos/thanos:<thanos-version>
           args:
             - compact
@@ -396,6 +386,7 @@ spec:
               cpu: 50m
               memory: 512Mi
             limits:
+              cpu: 4000m
               memory: 2Gi
           securityContext:
             allowPrivilegeEscalation: false

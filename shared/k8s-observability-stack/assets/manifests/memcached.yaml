@@ -52,8 +52,6 @@ spec:
           type: RuntimeDefault
       containers:
         - name: memcached
-          #trivy:ignore:KSV-0011 CPU limit intentionally omitted — memcached is CPU-spiky, see Deployment annotation
-          #trivy:ignore:KSV-0125 docker.io/memcached is the official upstream registry
           image: memcached:<memcached-version>-alpine
           args:
             # Memory in MB. The container memory limit must exceed it.
@@ -81,6 +79,7 @@ spec:
               cpu: 50m
               memory: 1200Mi
             limits:
+              cpu: 2000m
               memory: 1300Mi
           securityContext:
             allowPrivilegeEscalation: false
@@ -89,8 +88,6 @@ spec:
               drop:
                 - ALL
         - name: exporter
-          #trivy:ignore:KSV-0011 CPU limit intentionally omitted — metrics exporter, same policy as memcached container
-          #trivy:ignore:KSV-0125 docker.io/prom/memcached-exporter is the official Prometheus upstream
           image: prom/memcached-exporter:<exporter-version>
           args:
             - --memcached.address=localhost:11211
@@ -102,6 +99,7 @@ spec:
               cpu: 5m
               memory: 16Mi
             limits:
+              cpu: 100m
               memory: 64Mi
           securityContext:
             allowPrivilegeEscalation: false

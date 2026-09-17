@@ -82,7 +82,6 @@ spec:
           type: RuntimeDefault
       containers:
         - name: kubernetes-event-exporter
-          #trivy:ignore:KSV-0125 ghcr.io/resmoio is the canonical upstream registry for kubernetes-event-exporter
           image: ghcr.io/resmoio/kubernetes-event-exporter:<version>
           args:
             - -conf=/data/config.yaml
