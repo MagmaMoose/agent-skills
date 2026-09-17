@@ -1,0 +1,42 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: loki
+  namespace: <namespace>
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: loki
+      # Exact version, verified during the run.
+      version: "<chart-version>"
+      sourceRef:
+        kind: HelmRepository
+        name: grafana-community
+        namespace: flux-system
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+    timeout: 15m
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+    timeout: 15m
+  valuesFrom:
+    - kind: ConfigMap
+      name: loki-values
+      valuesKey: values.yaml
+  # Only where a cluster policy defaults pods to automountServiceAccountToken: false and the chart
+  # does not set it (architecture.md, Namespaces and placement). Loki itself does not need it.
+  # postRenderers:
+  #   - kustomize:
+  #       patches:
+  #         - target:
+  #             kind: DaemonSet
+  #           patch: |
+  #             - op: add
+  #               path: /spec/template/spec/automountServiceAccountToken
+  #               value: true

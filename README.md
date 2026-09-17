@@ -2,7 +2,7 @@
 
 Shared agent workflows for the MagmaMoose stack, packaged for Claude Code and Codex.
 
-This repository keeps one source of truth for PR review, PR triage, post-gate security and quality review, documentation sync, Kubernetes platform audit, codebase prune, architecture diagrams, tvOS SwiftUI, and context optimisation work. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
+This repository keeps one source of truth for PR review, PR triage, post-gate security and quality review, documentation sync, Kubernetes platform audit, Kubernetes observability stacks, codebase prune, architecture diagrams, tvOS SwiftUI, and context optimisation work. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
 
 Do not fork these workflows per project. Put project-specific rules in the target repository's `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, or relevant `README.md` files. The adapters instruct agents to read those files before acting and to treat explicit hard rules as blockers.
 
@@ -18,6 +18,7 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | Brimyr quality review | `/claude-skills:brimyr-quality-review` | `brimyr-quality-review` |
 | Docs sync | `/claude-skills:docs-update` | `docs-update` |
 | Kubernetes audit | `/claude-skills:k8s-audit` | `k8s-audit` |
+| Kubernetes observability stack | `/claude-skills:k8s-observability-stack` | `k8s-observability-stack` |
 | Codebase prune | `/claude-skills:codebase-prune` | `codebase-prune` |
 | tvOS SwiftUI | `/claude-skills:swiftui-build` | `swiftui-build` |
 | macOS SwiftUI | `/claude-skills:macos-swiftui` | `macos-swiftui` |
@@ -57,6 +58,22 @@ before fanning out across thirteen dimensions, each found and then adversarially
 with a ranked deliverable that leads with what is genuinely world-class, classifies every finding
 (including `falsely-claimed-fixed`, for the ones a document says are done and the cluster says are
 not), and lists the merge-ordering hazards among the open remediation PRs.
+
+`k8s-observability-stack` deploys, reviews or scaffolds an HA metrics, logs and traces stack on any
+Kubernetes cluster from one fixed reference architecture: Prometheus with Thanos, Loki, Tempo,
+OpenTelemetry collectors, Alertmanager and Grafana, with pluggable object storage (Azure Blob, S3,
+GCS, OCI, SeaweedFS or any S3-compatible store) and notification sinks (Teams, Slack, PagerDuty,
+Opsgenie, email, webhook). Output is Flux `HelmRelease` and `Kustomization` manifests by default, or
+plain Helm values with an install order. It is built on the observation that this kind of stack looks
+healthy on day one whether or not it is configured correctly, so the core of the workflow is sixteen
+invariants that each cost real data or a real outage when broken: one Thanos compactor per bucket,
+no offline deduplication, sidecar-safe Prometheus retention, discovery of every replica, a Watchdog
+that reaches an external heartbeat, a stateless Grafana, and the rest. It refuses to generate config
+that breaks one, sizes every PersistentVolume as working state because history lives in object
+storage, verifies chart versions and version-dependent behaviour upstream during the run (Tempo 3
+dropped multi-replica monolithic mode; Loki, Tempo and Grafana charts moved to grafana-community),
+and always writes an operator README with the node drain procedure, upgrade order and a post-deploy
+validation checklist.
 
 `swiftui-build` covers changes to a tvOS SwiftUI target. Roughly a quarter of SwiftUI is
 `@available(tvOS, unavailable)`, so the workflow is built around a `swiftc -typecheck` sweep

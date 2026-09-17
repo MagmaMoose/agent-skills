@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-09",
-  "summary": "Shared agent workflows for Claude Code and Codex, covering PR review, PR triage, post-gate security and quality review, documentation sync, Kubernetes platform audit, codebase prune, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, and context optimisation. Canonical logic lives in shared/; commands/ and skills/ are thin adapters for their respective platforms. Scripts provide standalone harvesters and payload builders used by the heavier workflows.",
+  "generated": "2026-09-17",
+  "summary": "Shared agent workflows for Claude Code and Codex, covering PR review, PR triage, post-gate security and quality review, documentation sync, Kubernetes platform audit, Kubernetes observability stack, codebase prune, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, and context optimisation. Canonical logic lives in shared/; commands/ and skills/ are thin adapters for their respective platforms. Scripts provide standalone harvesters and payload builders used by the heavier workflows.",
   "entrypoints": [
     "commands/{workflow}.md: Claude Code slash command, invoked as /claude-skills:{workflow}",
     "skills/{workflow}/SKILL.md: Codex skill, invoked by skill name",
@@ -20,6 +20,9 @@
         "brimyr-quality-review.md",
         "docs-update.md",
         "k8s-audit.md",
+        "k8s-observability-stack.md",
+        "k8s-observability-stack/references/*.md",
+        "k8s-observability-stack/assets/{values,manifests,flux}/*",
         "codebase-prune.md",
         "context-optimise.md",
         "swiftui-build.md",
@@ -39,7 +42,7 @@
       "exports": [
         "pr-review.md", "pr-triage.md", "chargate-security-review.md",
         "brimyr-quality-review.md", "docs-update.md", "k8s-audit.md",
-        "codebase-prune.md", "context-optimise.md", "swiftui-build.md", "macos-swiftui.md",
+        "k8s-observability-stack.md", "codebase-prune.md", "context-optimise.md", "swiftui-build.md", "macos-swiftui.md",
         "mikrotik-routeros.md",
         "tvos-swiftui.md (deprecated -> swiftui-build)",
         "update-docs.md (deprecated -> docs-update)"
@@ -52,7 +55,7 @@
       "exports": [
         "pr-review", "pr-triage", "chargate-security-review",
         "brimyr-quality-review", "docs-update", "k8s-audit",
-        "codebase-prune", "context-optimise", "swiftui-build", "macos-swiftui",
+        "k8s-observability-stack", "codebase-prune", "context-optimise", "swiftui-build", "macos-swiftui",
         "mikrotik-routeros",
         "tvos-swiftui (deprecated -> swiftui-build)",
         "update-docs (deprecated -> docs-update)"
@@ -72,13 +75,13 @@
     },
     "claude-plugin": {
       "path": ".claude-plugin/",
-      "purpose": "Claude Code plugin manifests. marketplace.json for registry; plugin.json defines the claude-skills plugin (version 0.6.0). Namespace stays claude-skills for backward compatibility.",
+      "purpose": "Claude Code plugin manifests. marketplace.json for registry; plugin.json defines the claude-skills plugin (version 0.8.0). Namespace stays claude-skills for backward compatibility.",
       "exports": ["marketplace.json", "plugin.json"],
       "depends_on": []
     },
     "codex-plugin": {
       "path": ".codex-plugin/",
-      "purpose": "Codex plugin manifest. plugin.json defines the agent-skills Codex plugin (version 1.5.0).",
+      "purpose": "Codex plugin manifest. plugin.json defines the agent-skills Codex plugin (version 1.7.0).",
       "exports": ["plugin.json"],
       "depends_on": []
     },
@@ -109,6 +112,11 @@
       "caller": "commands/codebase-prune.md",
       "calls": ["shared/codebase-prune.md"],
       "note": "shared/codebase-prune.md uses scripts/cruft-harvest.sh for the read-only repo dump"
+    },
+    {
+      "caller": "commands/k8s-observability-stack.md",
+      "calls": ["shared/k8s-observability-stack.md", "shared/k8s-observability-stack/references/*.md"],
+      "note": "shared/k8s-observability-stack.md is a router; architecture.md and invariants.md always load, the other references and the assets/ templates load per step"
     },
     {
       "caller": "commands/mikrotik-routeros.md",

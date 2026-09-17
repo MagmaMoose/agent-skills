@@ -1,0 +1,338 @@
+# kube-prometheus-stack values for the reference architecture.
+#
+# A starting shape, not a version source. Pin the chart version you verified, then diff these keys
+# against `helm show values prometheus-community/kube-prometheus-stack --version <pinned>`.
+# Placeholders look like <this>. Invariant numbers refer to references/invariants.md.
+
+fullnameOverride: prometheus
+
+# --- Control plane targets: per references/distros.md -------------------------------------
+# Disable a component AND its rule groups together. Never ship a permanently down target.
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+defaultRules:
+  create: true
+  rules:
+    etcd: false
+    kubeControllerManager: false
+    kubeProxy: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+
+# --- Prometheus --------------------------------------------------------------------------------
+prometheus:
+  # Headless Service the sidecars are discovered through (invariant 4).
+  thanosService:
+    enabled: true
+  thanosServiceMonitor:
+    enabled: true
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: null
+    maxUnavailable: 1
+  prometheusSpec:
+    replicas: 2
+    podAntiAffinity: hard
+    podAntiAffinityTopologyKey: kubernetes.io/hostname
+    # Working state only: 6h floor, 12h default (invariant 3, storage-model.md).
+    retention: 12h
+    retentionSize: 40GB
+    enableFeatures:
+      - exemplar-storage
+    # Tempo's metrics-generator writes here, to each replica (invariant 13).
+    enableRemoteWriteReceiver: true
+    externalLabels:
+      cluster: <cluster-name>
+    # Discover monitors and rules from every namespace, not only this release.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    # Rules labelled for Thanos Ruler are evaluated there only (invariant 14).
+    ruleSelector:
+      matchExpressions:
+        - key: evaluation
+          operator: NotIn
+          values:
+            - thanos-ruler
+    thanos:
+      image: quay.io/thanos/thanos:<thanos-version>
+      # Must equal the image tag: the operator picks the compaction mode from this field (invariant 3).
+      version: <thanos-version>
+      objectStorageConfig:
+        existingSecret:
+          name: thanos-objstore
+          key: objstore.yml
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: <storage-class>
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 50Gi
+    resources:
+      requests:
+        cpu: 200m
+        memory: 2Gi
+      limits:
+        memory: 4Gi
+
+# --- Alertmanager ------------------------------------------------------------------------------
+alertmanager:
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: null
+    maxUnavailable: 1
+  alertmanagerSpec:
+    replicas: 2
+    podAntiAffinity: hard
+    podAntiAffinityTopologyKey: kubernetes.io/hostname
+    # Mounted at /etc/alertmanager/secrets/<secret>/<key>. Both must exist before rollout.
+    secrets:
+      - alertmanager-sink
+      - alertmanager-heartbeat
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: <storage-class>
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+  config:
+    route:
+      receiver: sink
+      group_by:
+        - namespace
+        - alertname
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      routes:
+        # First, always: the dead man's switch (invariant 11).
+        - receiver: heartbeat
+          matchers:
+            - alertname = "Watchdog"
+          group_wait: 0s
+          group_interval: 1m
+          repeat_interval: 1m
+        - receiver: "null"
+          matchers:
+            - alertname = "InfoInhibitor"
+    receivers:
+      - name: "null"
+      - name: heartbeat
+        webhook_configs:
+          - send_resolved: false
+            url_file: /etc/alertmanager/secrets/alertmanager-heartbeat/url
+      # Replace with the receiver for the chosen sink (references/backends.md).
+      - name: sink
+        msteamsv2_configs:
+          - send_resolved: true
+            webhook_url_file: /etc/alertmanager/secrets/alertmanager-sink/url
+    # Setting `config` replaces the chart's defaults, inhibit rules included. These restore them.
+    inhibit_rules:
+      - source_matchers:
+          - severity = "critical"
+        target_matchers:
+          - severity =~ "warning|info"
+        equal:
+          - namespace
+          - alertname
+      - source_matchers:
+          - severity = "warning"
+        target_matchers:
+          - severity = "info"
+        equal:
+          - namespace
+          - alertname
+      - source_matchers:
+          - alertname = "InfoInhibitor"
+        target_matchers:
+          - severity = "info"
+        equal:
+          - namespace
+      - target_matchers:
+          - alertname = "InfoInhibitor"
+
+# --- Thanos Ruler ------------------------------------------------------------------------------
+thanosRuler:
+  enabled: true
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: null
+    maxUnavailable: 1
+  thanosRulerSpec:
+    replicas: 2
+    podAntiAffinity: hard
+    podAntiAffinityTopologyKey: kubernetes.io/hostname
+    image:
+      registry: quay.io
+      repository: thanos/thanos
+      tag: <thanos-version>
+    # Only rules labelled for the Ruler (invariant 14). Its defaults would select every chart rule.
+    ruleSelectorNilUsesHelmValues: false
+    ruleSelector:
+      matchLabels:
+        evaluation: thanos-ruler
+    ruleNamespaceSelector: {}
+    queryEndpoints:
+      - dns+thanos-query.<namespace>.svc.cluster.local:9090
+    # Send to every Alertmanager replica, never one Service (invariant 13).
+    alertmanagersConfig:
+      secret:
+        alertmanagers:
+          - api_version: v2
+            scheme: http
+            static_configs:
+              - dnssrv+_http-web._tcp.alertmanager-operated.<namespace>.svc.cluster.local
+    objectStorageConfig:
+      existingSecret:
+        name: thanos-objstore
+        key: objstore.yml
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: <storage-class>
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 10Gi
+
+# --- Grafana (subchart) ------------------------------------------------------------------------
+grafana:
+  enabled: true
+  replicas: 2
+  # Stateless (invariant 12).
+  persistence:
+    enabled: false
+  headlessService: true
+  deploymentStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  podDisruptionBudget:
+    maxUnavailable: 1
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: grafana
+          topologyKey: kubernetes.io/hostname
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  envValueFrom:
+    GF_DATABASE_USER:
+      secretKeyRef:
+        name: grafana-database
+        key: username
+    GF_DATABASE_PASSWORD:
+      secretKeyRef:
+        name: grafana-database
+        key: password
+  grafana.ini:
+    database:
+      type: postgres
+      host: <postgres-rw-service>.<postgres-namespace>.svc.cluster.local:5432
+      name: grafana
+      ssl_mode: require
+    unified_alerting:
+      enabled: true
+      ha_peers: "{{ include \"grafana.fullname\" . }}-headless:9094"
+      ha_listen_address: "${POD_IP}:9094"
+      ha_advertise_address: "${POD_IP}:9094"
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+    datasources:
+      # All datasources are provisioned below, with fixed uids for correlation.
+      defaultDatasourceEnabled: false
+  # From references/correlation.md. `$` is written `$$` in provisioning files.
+  additionalDataSources:
+    - name: Metrics
+      uid: metrics
+      type: prometheus
+      url: http://thanos-query.<namespace>.svc.cluster.local:9090
+      access: proxy
+      isDefault: true
+      jsonData:
+        httpMethod: POST
+        exemplarTraceIdDestinations:
+          - name: trace_id
+            datasourceUid: tempo
+            urlDisplayLabel: View trace
+    - name: Logs
+      uid: logs
+      type: loki
+      url: http://loki-read.<loki-namespace>.svc.cluster.local:3100
+      access: proxy
+      jsonData:
+        maxLines: 1000
+        derivedFields:
+          - name: TraceID
+            matcherType: label
+            matcherRegex: trace_id
+            datasourceUid: tempo
+            url: "$${__value.raw}"
+            urlDisplayLabel: View trace
+          - name: TraceIDInLine
+            matcherType: regex
+            matcherRegex: '(?:trace_?id|traceId)"?\s*[=:]\s*"?([0-9a-fA-F]{32})'
+            datasourceUid: tempo
+            url: "$${__value.raw}"
+            urlDisplayLabel: View trace
+    - name: Traces
+      uid: tempo
+      type: tempo
+      url: http://tempo.<namespace>.svc.cluster.local:3200
+      access: proxy
+      jsonData:
+        tracesToLogsV2:
+          datasourceUid: logs
+          spanStartTimeShift: "-5m"
+          spanEndTimeShift: "5m"
+          filterByTraceID: true
+          tags:
+            - key: k8s.namespace.name
+              value: k8s_namespace_name
+        tracesToMetrics:
+          datasourceUid: metrics
+          tags:
+            - key: service.name
+              value: service
+          queries:
+            - name: Request rate
+              query: sum(rate(traces_spanmetrics_calls_total{$$__tags}[5m]))
+            - name: Error rate
+              query: sum(rate(traces_spanmetrics_calls_total{$$__tags,status_code="STATUS_CODE_ERROR"}[5m]))
+        serviceMap:
+          datasourceUid: metrics
+        nodeGraph:
+          enabled: true
+
+# --- Exporters -----------------------------------------------------------------------------------
+# One replica, or autosharding (invariant 5).
+kube-state-metrics:
+  replicas: 1

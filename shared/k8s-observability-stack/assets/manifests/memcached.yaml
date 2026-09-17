@@ -1,0 +1,137 @@
+# Shared memcached for Loki's chunk and results caches and the Thanos store's index cache and caching
+# bucket. Official image, not Bitnami (architecture.md). Pin the tags you verified.
+# Placeholders look like <this>.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memcached
+  namespace: <namespace>
+  labels:
+    app.kubernetes.io/name: memcached
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: memcached
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: memcached
+    spec:
+      automountServiceAccountToken: false
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: memcached
+              topologyKey: kubernetes.io/hostname
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 11211
+        runAsGroup: 11211
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: memcached
+          image: memcached:<memcached-version>-alpine
+          args:
+            # Memory in MB. The container memory limit must exceed it.
+            - -m
+            - "1024"
+            # Loki writes whole chunks, which exceed the default 1MB item size (invariant 8).
+            - -I
+            - 5m
+            - -c
+            - "16384"
+            - -t
+            - "4"
+          ports:
+            - name: client
+              containerPort: 11211
+          readinessProbe:
+            tcpSocket:
+              port: client
+          livenessProbe:
+            tcpSocket:
+              port: client
+          resources:
+            requests:
+              cpu: 50m
+              memory: 1200Mi
+            limits:
+              memory: 1300Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+        - name: exporter
+          image: prom/memcached-exporter:<exporter-version>
+          args:
+            - --memcached.address=localhost:11211
+          ports:
+            - name: metrics
+              containerPort: 9150
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+---
+# Headless, so clients hash across individual pods (dnssrvnoa+_client._tcp.memcached...).
+apiVersion: v1
+kind: Service
+metadata:
+  name: memcached
+  namespace: <namespace>
+  labels:
+    app.kubernetes.io/name: memcached
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: memcached
+  ports:
+    - name: client
+      port: 11211
+      targetPort: client
+    - name: metrics
+      port: 9150
+      targetPort: metrics
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: memcached
+  namespace: <namespace>
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: memcached
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: memcached
+  namespace: <namespace>
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: memcached
+  endpoints:
+    - port: metrics

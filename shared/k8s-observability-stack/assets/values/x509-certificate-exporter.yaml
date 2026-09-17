@@ -1,0 +1,68 @@
+# x509-certificate-exporter values (enix chart). One Deployment for certificates in Secrets, plus
+# optional DaemonSets for certificates on node disks. File paths per distribution: distros.md.
+# A starting shape, not a version source. Placeholders look like <this>.
+#
+# The chart does not set automountServiceAccountToken on the pod. Where a cluster policy defaults it
+# to false, the Secrets exporter (which reads Secrets through the API) needs it set to true, for
+# example with a Flux postRenderers patch.
+
+secretsExporter:
+  enabled: true
+  replicas: 1
+  secretTypes:
+    - type: kubernetes.io/tls
+      key: tls.crt
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 150Mi
+
+# Example for k3s, following the exporter's upstream k3s example, which lists certificate FILES
+# rather than watching the TLS directories. Those directories also hold private keys and other
+# non-certificate files, so check the exporter's read-error metrics before switching to directory
+# watches. Remove the whole block on managed control planes.
+hostPathsExporter:
+  daemonSets:
+    server:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+      watchFiles:
+        - /var/lib/rancher/k3s/server/tls/server-ca.crt
+        - /var/lib/rancher/k3s/server/tls/client-ca.crt
+        - /var/lib/rancher/k3s/server/tls/request-header-ca.crt
+        - /var/lib/rancher/k3s/server/tls/serving-kube-apiserver.crt
+        - /var/lib/rancher/k3s/server/tls/client-kube-apiserver.crt
+        - /var/lib/rancher/k3s/server/tls/client-controller.crt
+        - /var/lib/rancher/k3s/server/tls/client-scheduler.crt
+        - /var/lib/rancher/k3s/server/tls/client-kube-proxy.crt
+        # Embedded etcd only.
+        - /var/lib/rancher/k3s/server/tls/etcd/server-ca.crt
+        - /var/lib/rancher/k3s/server/tls/etcd/peer-ca.crt
+        - /var/lib/rancher/k3s/server/tls/etcd/client-ca.crt
+        - /var/lib/rancher/k3s/agent/client-kubelet.crt
+        - /var/lib/rancher/k3s/agent/serving-kubelet.crt
+      watchKubeconfFiles:
+        - /etc/rancher/k3s/k3s.yaml
+    agents:
+      nodeSelector:
+        <worker-node-label>: "<value>"
+      watchFiles:
+        - /var/lib/rancher/k3s/agent/client-kubelet.crt
+        - /var/lib/rancher/k3s/agent/serving-kubelet.crt
+        - /var/lib/rancher/k3s/agent/client-ca.crt
+        - /var/lib/rancher/k3s/agent/server-ca.crt
+
+prometheusServiceMonitor:
+  create: true
+# Upstream rules: a warning tier (28 days) and a critical tier (14 days). If the root route drops
+# warnings, decide deliberately whether the warning tier needs a route; cert-manager's own alerts
+# may already cover the certificates it manages.
+prometheusRules:
+  create: true
+  warningDaysLeft: 28
+  criticalDaysLeft: 14

@@ -1,0 +1,44 @@
+# Grafana's external Postgres as a three-instance CloudNativePG cluster (invariant 12).
+# If the cluster already runs a shared CloudNativePG cluster, prefer a managed role plus a `Database`
+# resource on it over a new cluster, and follow the repository's pattern.
+# Placeholders look like <this>.
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: grafana-db
+  namespace: <namespace>
+spec:
+  instances: 3
+  # Replication is at the Postgres level, so a local, node-pinned StorageClass is fine here.
+  storage:
+    storageClass: <storage-class>
+    size: 5Gi
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
+  bootstrap:
+    initdb:
+      database: grafana
+      owner: grafana
+      secret:
+        # kubernetes.io/basic-auth Secret with `username: grafana` and `password`.
+        # Grafana reads the same Secret (values/kube-prometheus-stack.yaml, envValueFrom).
+        name: grafana-database
+  monitoring:
+    enablePodMonitor: true
+  # Back up with the repository's CloudNativePG backup method (barman object store or plugin).
+  # Grafana's database holds users, teams, annotations and alert state that is not in git.
+---
+# Fails on every run until the Cluster has a backup method. Add one, or remove this object and say so.
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: grafana-db-daily
+  namespace: <namespace>
+spec:
+  schedule: "0 0 3 * * *"
+  backupOwnerReference: self
+  cluster:
+    name: grafana-db

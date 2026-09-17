@@ -1,0 +1,39 @@
+# Per-cluster Flux Kustomizations. Operators and CRDs first, the stack after them (output.md, CRDs
+# before custom resources). Cluster-specific values come from one ConfigMap through postBuild
+# substitution, so a second cluster is a new ConfigMap, not a copy of the tree.
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: observability-operators
+  namespace: flux-system
+spec:
+  interval: 30m
+  path: ./infrastructure/observability/operators
+  prune: true
+  wait: true
+  timeout: 15m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: observability
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: observability-operators
+  interval: 30m
+  path: ./infrastructure/observability
+  prune: true
+  wait: true
+  timeout: 30m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: observability-cluster-values

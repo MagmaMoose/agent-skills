@@ -1,0 +1,27 @@
+# node-problem-detector values (deliveryhero chart). A DaemonSet on every node, exposing problems as
+# node conditions, events and Prometheus metrics. A starting shape, not a version source.
+
+settings:
+  # The chart default also loads docker-monitor.json, which only applies to Docker runtimes.
+  log_monitors:
+    - /config/kernel-monitor.json
+    - /config/readonly-monitor.json
+
+# Every node, control plane included.
+tolerations:
+  - effect: NoSchedule
+    operator: Exists
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+  prometheusRule:
+    enabled: true
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    memory: 100Mi
