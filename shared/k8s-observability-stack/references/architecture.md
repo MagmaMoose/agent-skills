@@ -82,7 +82,7 @@ than generating it silently.
 | Component | Kind | Replicas | Notes |
 | --- | --- | --- | --- |
 | kubernetes-event-exporter | Deployment | 1 | **Single replica.** Leader election is off by default. Invariant 6. Its last release (v1.7) is from February 2024; check the project is alive, or use a single-replica collector with the Kubernetes events or objects receiver instead |
-| x509-certificate-exporter | Deployment | 1 | Plus an optional DaemonSet for certificates on node disks |
+| x509-certificate-exporter | Deployment | 1 | Certificates in Secrets. No host-path DaemonSets; self-managed API server certificates are probed over TLS (distros.md) |
 | node-problem-detector | DaemonSet | per node | Kernel and runtime problems as node conditions and metrics |
 
 ### Operators
@@ -217,7 +217,7 @@ replica counts changed.
   `tracing`) is fine but multiplies NetworkPolicies, quotas and Pod Security exemptions.
 - **Pod Security.** Several node agents need host access that Pod Security `baseline` forbids:
   node-exporter (host network and PID, host paths), node-problem-detector (privileged, `/dev/kmsg`),
-  the x509 exporter's host-path DaemonSets, and the collector when it tails log files. Run them in a
+  and the collector when it tails log files. Run them in a
   namespace whose Pod Security level allows it (`privileged` for that namespace only), or exempt
   them explicitly, and say which.
 - **Dedicated node pool.** Pin every non-DaemonSet component to it with a nodeSelector (or node
@@ -228,13 +228,35 @@ replica counts changed.
   | kube-prometheus-stack | `prometheus.prometheusSpec`, `alertmanager.alertmanagerSpec`, `thanosRuler.thanosRulerSpec`, `prometheusOperator`, `grafana`, `kube-state-metrics`: each has `nodeSelector` and `tolerations` |
   | Loki | `defaults.nodeSelector` and `defaults.tolerations` (all Loki components) |
   | Tempo, OpenTelemetry collector, node-problem-detector | top-level `nodeSelector` and `tolerations` |
-  | x509-certificate-exporter | `secretsExporter.nodeSelector`; per DaemonSet under `hostPathsExporter.daemonSets.<name>` |
+  | x509-certificate-exporter | `secretsExporter.nodeSelector` and `secretsExporter.tolerations` |
   | Raw manifests (Thanos, memcached, event exporter) | the pod spec |
 
   Check the keys against the chart version you pin. DaemonSets that must cover every node
   (node-exporter, node-problem-detector, the log-tailing agent) need tolerations for every taint on
   those nodes. Some charts ship them (node-exporter tolerates all `NoSchedule` taints by default);
   the OpenTelemetry collector chart ships none.
+- **Network access.** Most of the stack serves unauthenticated APIs: Prometheus (including the remote
+  write receiver Tempo needs), the Thanos sidecar's StoreAPI, Loki, Tempo's receivers and query API,
+  memcached. Where the CNI enforces NetworkPolicy, give each an ingress policy that admits only its
+  callers, and list them in the output README. A namespace left out of a default-deny baseline gets no
+  protection otherwise. The callers in the reference architecture:
+
+  | Pods | Port | Callers |
+  | --- | --- | --- |
+  | Prometheus | web (9090) | Tempo's metrics-generator, Prometheus itself |
+  | Prometheus | Thanos sidecar gRPC (10901) | thanos-query |
+  | Prometheus | sidecar and config-reloader HTTP | Prometheus |
+  | Tempo | OTLP gRPC (4317) | otel-gateway |
+  | Tempo | HTTP (3200) | Grafana, Prometheus |
+  | Loki | HTTP (3100) | the log collector, Grafana, Prometheus, other Loki pods |
+  | Loki | gRPC (9095), memberlist (7946 TCP and UDP) | other Loki pods |
+  | memcached | 11211 | Loki, thanos-store |
+  | memcached | exporter port | Prometheus |
+
+  Readers outside the stack (an AI assistant, a rightsizing job, a Grafana in another namespace) go
+  through thanos-query or need their own rule. Take pod labels from the rendered charts, not from
+  memory: the OpenTelemetry collector chart labels its pods `app.kubernetes.io/name:
+  opentelemetry-collector`, whatever the release is called.
 - **API access.** Components that call the Kubernetes API need a service account token:
   otel-collector (`k8s_attributes`), kubernetes-event-exporter, x509-certificate-exporter's Secrets
   exporter, node-problem-detector (node conditions), Grafana's dashboard and datasource sidecars,

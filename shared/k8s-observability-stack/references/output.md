@@ -70,8 +70,11 @@ reconciling too. Fix it with one of:
 - choosing a deployment method with no CRDs (the OpenTelemetry collector chart instead of
   `OpenTelemetryCollector` resources).
 
-A custom resource rendered by a HelmRelease only fails that release, which retries on its own. That
-is acceptable; a failing Kustomization is not.
+A custom resource rendered by a HelmRelease fails only that release, but not harmlessly: once its
+remediation retries are exhausted, Flux leaves the release failed until someone forces a reconcile.
+So give every HelmRelease whose chart renders ServiceMonitor, PodMonitor or PrometheusRule resources
+`dependsOn` on the release that installs those CRDs, with `namespace` when it lives elsewhere. With
+plain Helm, install the CRD owner first.
 
 **Helm merges maps and replaces lists.** With layered values (`valuesFrom` several ConfigMaps, or a
 base plus overlay), maps deep-merge but a list in a later layer replaces the earlier list entirely.
