@@ -81,7 +81,7 @@ config:
         insecure: true
     # Loki's native OTLP endpoint; the exporter appends /v1/logs.
     otlp_http/loki:
-      endpoint: http://loki-write.<loki-namespace>.svc.cluster.local:3100/otlp  # nosemgrep: DS137138  DevSkim: ignore DS137138
+      endpoint: http://loki-write.<loki-namespace>.svc.cluster.local:3100/otlp  # DevSkim: ignore DS137138
   service:
     # memory_limiter is not declared in the processors block above; the opentelemetry-collector
     # chart injects and merges it from its default config. The rendered pipeline resolves correctly.

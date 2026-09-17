@@ -42,9 +42,9 @@ tempo:
     storage:
       path: /var/tempo/generator/wal
       remote_write:
-        - url: http://<prometheus-pod-0>.prometheus-operated.<namespace>.svc:9090/api/v1/write  # nosemgrep: DS137138  DevSkim: ignore DS137138
+        - url: http://<prometheus-pod-0>.prometheus-operated.<namespace>.svc:9090/api/v1/write  # DevSkim: ignore DS137138
           send_exemplars: true
-        - url: http://<prometheus-pod-1>.prometheus-operated.<namespace>.svc:9090/api/v1/write  # nosemgrep: DS137138  DevSkim: ignore DS137138
+        - url: http://<prometheus-pod-1>.prometheus-operated.<namespace>.svc:9090/api/v1/write  # DevSkim: ignore DS137138
           send_exemplars: true
   # Tempo 3 refuses to start on the legacy flat overrides format.
   overrides:

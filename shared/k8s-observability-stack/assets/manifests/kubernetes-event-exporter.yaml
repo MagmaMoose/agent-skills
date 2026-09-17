@@ -1,6 +1,8 @@
 # kubernetes-event-exporter (resmoio fork), one replica, events to stdout as JSON so the log
 # collector ships them to Loki. Invariant 6: one replica and Recreate, unless leader election is on.
 # Pin the image you verified. Placeholders look like <this>.
+# The checkov.io/skip annotations are for the template (placeholder tags, no NetworkPolicy): drop each
+# one the generated manifest satisfies.
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -51,14 +53,10 @@ metadata:
   labels:
     app.kubernetes.io/name: kubernetes-event-exporter
   annotations:
-    # SA token required — the container watches the K8s event stream via the API.
-    checkov.io/skip1: "CKV_K8S_38=automountServiceAccountToken intentionally true; events API access is the entire purpose of this workload"
-    # Template file: <version> is a placeholder filled by the operator; digest cannot be pre-pinned.
-    checkov.io/skip2: "CKV_K8S_43=image digest pinning deferred to operator — tag is a placeholder"
-    # Pull policy is an operator decision; Always is inappropriate for air-gapped clusters.
-    checkov.io/skip3: "CKV_K8S_15=imagePullPolicy is an operator/cluster decision, not enforced in the reference template"
-    # NetworkPolicy implementation is CNI and cluster-specific; provided separately by the operator.
-    checkov.io/skip4: "CKV2_K8S_6=NetworkPolicy is site-specific and provided by the operator, not bundled in the component manifest"
+    checkov.io/skip1: "CKV_K8S_38=Watches events through the Kubernetes API"
+    checkov.io/skip2: "CKV_K8S_43=Template: the tag is a placeholder; pin the digest when generating"
+    checkov.io/skip3: "CKV_K8S_15=Template: pull policy is a cluster decision (registry mirrors, air gap)"
+    checkov.io/skip4: "CKV2_K8S_6=Template: NetworkPolicy depends on the CNI; add one where it is enforced"
 spec:
   replicas: 1
   strategy:
@@ -88,13 +86,14 @@ spec:
           ports:
             - name: metrics
               containerPort: 2112
+          # Served next to /metrics (pkg/metrics in the exporter).
           livenessProbe:
             httpGet:
-              path: /healthz
+              path: /-/healthy
               port: metrics
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: /-/ready
               port: metrics
           resources:
             requests:

@@ -3,6 +3,8 @@
 #
 # A starting shape, not a version source: pin the image you verified and check each flag against that
 # version's docs. Placeholders look like <this>. Invariant numbers refer to references/invariants.md.
+# The checkov.io/skip annotations are for the template (placeholder tags, no NetworkPolicy): drop each
+# one the generated manifest satisfies.
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -69,16 +71,9 @@ metadata:
   labels:
     app.kubernetes.io/name: thanos-query
   annotations:
-    # Template: <thanos-version> is a placeholder; operator pins the digest when deploying.
-    checkov.io/skip1: "CKV_K8S_43=image digest pinning deferred to operator — tag is a placeholder"
-    # Pull policy is an operator/air-gap decision, not mandated in the reference template.
-    checkov.io/skip2: "CKV_K8S_15=imagePullPolicy is an operator/cluster decision"
-    # Thanos CPU usage is bursty; hard CPU limits cause severe throttling and missed scrapes.
-    checkov.io/skip3: "CKV_K8S_11=CPU limit intentionally omitted — Thanos query is CPU-bursty and throttling causes query timeouts"
-    # UID 1001 is set by the official quay.io/thanos image; overriding requires rebuilding the image.
-    checkov.io/skip4: "CKV_K8S_40=UID 1001 is the official Thanos image's built-in user; changing it would break filesystem permissions inside the image"
-    # NetworkPolicy is CNI/cluster-specific and provided by the operator.
-    checkov.io/skip5: "CKV2_K8S_6=NetworkPolicy is site-specific and applied by the operator"
+    checkov.io/skip1: "CKV_K8S_43=Template: the tag is a placeholder; pin the digest when generating"
+    checkov.io/skip2: "CKV_K8S_15=Template: pull policy is a cluster decision (registry mirrors, air gap)"
+    checkov.io/skip3: "CKV2_K8S_6=Template: NetworkPolicy depends on the CNI; add one where it is enforced"
 spec:
   replicas: 2
   # Invariant 10: required anti-affinity, so no surge pod.
@@ -193,11 +188,9 @@ metadata:
   labels:
     app.kubernetes.io/name: thanos-store
   annotations:
-    checkov.io/skip1: "CKV_K8S_43=image digest pinning deferred to operator — tag is a placeholder"
-    checkov.io/skip2: "CKV_K8S_15=imagePullPolicy is an operator/cluster decision"
-    checkov.io/skip3: "CKV_K8S_11=CPU limit intentionally omitted — Thanos store is CPU-bursty during block index loads"
-    checkov.io/skip4: "CKV_K8S_40=UID 1001 is the official Thanos image's built-in user"
-    checkov.io/skip5: "CKV2_K8S_6=NetworkPolicy is site-specific and applied by the operator"
+    checkov.io/skip1: "CKV_K8S_43=Template: the tag is a placeholder; pin the digest when generating"
+    checkov.io/skip2: "CKV_K8S_15=Template: pull policy is a cluster decision (registry mirrors, air gap)"
+    checkov.io/skip3: "CKV2_K8S_6=Template: NetworkPolicy depends on the CNI; add one where it is enforced"
 spec:
   replicas: 2
   serviceName: thanos-store
@@ -330,11 +323,9 @@ metadata:
   labels:
     app.kubernetes.io/name: thanos-compactor
   annotations:
-    checkov.io/skip1: "CKV_K8S_43=image digest pinning deferred to operator — tag is a placeholder"
-    checkov.io/skip2: "CKV_K8S_15=imagePullPolicy is an operator/cluster decision"
-    checkov.io/skip3: "CKV_K8S_11=CPU limit intentionally omitted — compaction is CPU-bursty and throttling stalls the compaction loop"
-    checkov.io/skip4: "CKV_K8S_40=UID 1001 is the official Thanos image's built-in user"
-    checkov.io/skip5: "CKV2_K8S_6=NetworkPolicy is site-specific and applied by the operator"
+    checkov.io/skip1: "CKV_K8S_43=Template: the tag is a placeholder; pin the digest when generating"
+    checkov.io/skip2: "CKV_K8S_15=Template: pull policy is a cluster decision (registry mirrors, air gap)"
+    checkov.io/skip3: "CKV2_K8S_6=Template: NetworkPolicy depends on the CNI; add one where it is enforced"
 spec:
   replicas: 1
   serviceName: thanos-compactor

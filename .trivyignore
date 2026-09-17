@@ -3,13 +3,3 @@
 # for these projects. Treating them as untrusted requires a site-specific registry
 # allowlist configuration, which is beyond the scope of these reference manifests.
 KSV-0125
-
-# DS137138: All flagged URLs are internal Kubernetes cluster service addresses
-# (.svc.cluster.local). They are not publicly reachable. Intra-cluster TLS is
-# an optional infrastructure layer (service mesh) that operators can add; the
-# reference architecture uses standard HTTP for in-cluster service communication.
-DS137138
-
-# DS162092: --memcached.address=localhost:11211 is the memcached-exporter's target flag,
-# not debug output. The check misidentifies the flag name pattern.
-DS162092
