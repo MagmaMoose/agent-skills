@@ -49,8 +49,7 @@ loki:
     delete_request_store: azure        # same value as schemaConfig object_store
   rulerConfig:
     # Every Alertmanager replica through SRV discovery, not one Service (invariant 13).
-    # nosemgrep: DS137138 -- in-cluster HTTP; Loki ruler discovers Alertmanager replicas inside the cluster network
-    alertmanager_url: http://_http-web._tcp.alertmanager-operated.<alertmanager-namespace>.svc.cluster.local
+    alertmanager_url: http://_http-web._tcp.alertmanager-operated.<alertmanager-namespace>.svc.cluster.local  # nosemgrep: DS137138
     enable_alertmanager_discovery: true
   query_range:
     cache_results: true

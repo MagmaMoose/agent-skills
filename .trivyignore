@@ -9,3 +9,7 @@ KSV-0125
 # an optional infrastructure layer (service mesh) that operators can add; the
 # reference architecture uses standard HTTP for in-cluster service communication.
 DS137138
+
+# DS162092: --memcached.address=localhost:11211 is the memcached-exporter's target flag,
+# not debug output. The check misidentifies the flag name pattern.
+DS162092
