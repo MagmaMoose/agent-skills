@@ -81,6 +81,7 @@ config:
         insecure: true
     # Loki's native OTLP endpoint; the exporter appends /v1/logs.
     otlp_http/loki:
+      # nosemgrep: DS137138 -- in-cluster HTTP; OTel collector sends logs to Loki inside the cluster network
       endpoint: http://loki-write.<loki-namespace>.svc.cluster.local:3100/otlp
   service:
     pipelines:

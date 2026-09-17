@@ -50,6 +50,15 @@ metadata:
   namespace: <namespace>
   labels:
     app.kubernetes.io/name: kubernetes-event-exporter
+  annotations:
+    # SA token required — the container watches the K8s event stream via the API.
+    checkov.io/skip1: "CKV_K8S_38=automountServiceAccountToken intentionally true; events API access is the entire purpose of this workload"
+    # Template file: <version> is a placeholder filled by the operator; digest cannot be pre-pinned.
+    checkov.io/skip2: "CKV_K8S_43=image digest pinning deferred to operator — tag is a placeholder"
+    # Pull policy is an operator decision; Always is inappropriate for air-gapped clusters.
+    checkov.io/skip3: "CKV_K8S_15=imagePullPolicy is an operator/cluster decision, not enforced in the reference template"
+    # NetworkPolicy implementation is CNI and cluster-specific; provided separately by the operator.
+    checkov.io/skip4: "CKV2_K8S_6=NetworkPolicy is site-specific and provided by the operator, not bundled in the component manifest"
 spec:
   replicas: 1
   strategy:
@@ -68,21 +77,32 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534
+        runAsGroup: 65534
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: kubernetes-event-exporter
+          #trivy:ignore:KSV-0125 ghcr.io/resmoio is the canonical upstream registry for kubernetes-event-exporter
           image: ghcr.io/resmoio/kubernetes-event-exporter:<version>
           args:
             - -conf=/data/config.yaml
           ports:
             - name: metrics
               containerPort: 2112
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
           resources:
             requests:
               cpu: 10m
               memory: 32Mi
             limits:
+              cpu: 100m
               memory: 128Mi
           securityContext:
             allowPrivilegeEscalation: false

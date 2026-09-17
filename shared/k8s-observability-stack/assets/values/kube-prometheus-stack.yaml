@@ -274,6 +274,7 @@ grafana:
     - name: Metrics
       uid: metrics
       type: prometheus
+      # nosemgrep: DS137138 -- in-cluster HTTP; Grafana talks to Thanos inside the cluster network, no public exposure
       url: http://thanos-query.<namespace>.svc.cluster.local:9090
       access: proxy
       isDefault: true
@@ -286,6 +287,7 @@ grafana:
     - name: Logs
       uid: logs
       type: loki
+      # nosemgrep: DS137138 -- in-cluster HTTP; Grafana talks to Loki inside the cluster network
       url: http://loki-read.<loki-namespace>.svc.cluster.local:3100
       access: proxy
       jsonData:
@@ -306,6 +308,7 @@ grafana:
     - name: Traces
       uid: tempo
       type: tempo
+      # nosemgrep: DS137138 -- in-cluster HTTP; Grafana talks to Tempo inside the cluster network
       url: http://tempo.<namespace>.svc.cluster.local:3200
       access: proxy
       jsonData:

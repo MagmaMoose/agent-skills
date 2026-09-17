@@ -42,8 +42,10 @@ tempo:
     storage:
       path: /var/tempo/generator/wal
       remote_write:
+        # nosemgrep: DS137138 -- in-cluster HTTP; Tempo metrics generator writes to Prometheus inside the cluster network
         - url: http://<prometheus-pod-0>.prometheus-operated.<namespace>.svc:9090/api/v1/write
           send_exemplars: true
+        # nosemgrep: DS137138 -- in-cluster HTTP
         - url: http://<prometheus-pod-1>.prometheus-operated.<namespace>.svc:9090/api/v1/write
           send_exemplars: true
   # Tempo 3 refuses to start on the legacy flat overrides format.

@@ -5,6 +5,7 @@
 # against `helm show values`. Simple scalable mode is deprecated in Loki 3.x and removed in 4.0
 # (architecture.md). Placeholders look like <this>.
 
+# SimpleScalable is deprecated in Loki 3.x and removed in 4.0; use `distributed` for any chart >= 4.0.
 deploymentMode: SimpleScalable
 
 loki:
@@ -48,6 +49,7 @@ loki:
     delete_request_store: azure        # same value as schemaConfig object_store
   rulerConfig:
     # Every Alertmanager replica through SRV discovery, not one Service (invariant 13).
+    # nosemgrep: DS137138 -- in-cluster HTTP; Loki ruler discovers Alertmanager replicas inside the cluster network
     alertmanager_url: http://_http-web._tcp.alertmanager-operated.<alertmanager-namespace>.svc.cluster.local
     enable_alertmanager_discovery: true
   query_range:
