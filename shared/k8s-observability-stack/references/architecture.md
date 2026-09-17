@@ -243,7 +243,7 @@ replica counts changed.
 
   | Pods | Port | Callers |
   | --- | --- | --- |
-  | Prometheus | web (9090) | Tempo's metrics-generator, Prometheus itself |
+  | Prometheus | web (9090) | Tempo's metrics-generator, otel-gateway (when its metrics pipeline is on), Prometheus itself |
   | Prometheus | Thanos sidecar gRPC (10901) | thanos-query |
   | Prometheus | sidecar and config-reloader HTTP | Prometheus |
   | thanos-query | HTTP (9090) | Grafana, Thanos Ruler, other PromQL readers, Prometheus |
