@@ -1,0 +1,69 @@
+# Tempo values (grafana-community `tempo` chart, monolithic) for the reference architecture.
+#
+# A starting shape, not a version source. Pin the chart version you verified and diff these keys
+# against `helm show values`. Placeholders look like <this>.
+
+# Invariant 9. Tempo 3.x does not support more than one monolithic instance. Re-check for the
+# version you deploy before raising this.
+replicas: 1
+
+tempo:
+  retention: 168h
+  reportingEnabled: false
+  # Storage block from references/backends.md for the chosen backend.
+  storage:
+    trace:
+      backend: azure
+      azure:
+        container_name: <tempo-bucket>
+        storage_account_name: <account>
+        storage_account_key: ${AZURE_STORAGE_ACCOUNT_KEY}
+      wal:
+        path: /var/tempo/wal
+  extraArgs:
+    config.expand-env: "true"
+  extraEnvFrom:
+    - secretRef:
+        name: tempo-objstore
+  # The gateway sends OTLP. The chart's Service template dereferences the default jaeger receiver
+  # block, so leave that block in place (nulling it fails the render) and send nothing to it.
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+  # RED metrics and service graph into Prometheus, one entry per replica (invariant 13). Pod names
+  # come from the Prometheus resource: with kube-prometheus-stack and `fullnameOverride: prometheus`
+  # they are prometheus-prometheus-prometheus-0 and -1. Check the rendered StatefulSet name.
+  metricsGenerator:
+    enabled: true
+    storage:
+      path: /var/tempo/generator/wal
+      remote_write:
+        - url: http://<prometheus-pod-0>.prometheus-operated.<namespace>.svc:9090/api/v1/write  # DevSkim: ignore DS137138
+          send_exemplars: true
+        - url: http://<prometheus-pod-1>.prometheus-operated.<namespace>.svc:9090/api/v1/write  # DevSkim: ignore DS137138
+          send_exemplars: true
+  # Tempo 3 refuses to start on the legacy flat overrides format.
+  overrides:
+    defaults:
+      metrics_generator:
+        processors:
+          - service-graphs
+          - span-metrics
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+
+persistence:
+  enabled: true
+  storageClassName: <storage-class>
+  size: 10Gi
+
+serviceMonitor:
+  enabled: true

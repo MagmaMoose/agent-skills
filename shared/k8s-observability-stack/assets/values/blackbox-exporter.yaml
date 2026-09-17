@@ -1,0 +1,47 @@
+# prometheus-blackbox-exporter values. Two stateless replicas with invariant 10 placement.
+# Probe targets live in Probe resources or the chart's serviceMonitor.targets.
+# A starting shape, not a version source.
+
+replicas: 2
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 0
+    maxUnavailable: 1
+
+podDisruptionBudget:
+  maxUnavailable: 1
+
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: prometheus-blackbox-exporter
+        topologyKey: kubernetes.io/hostname
+
+config:
+  modules:
+    http_2xx:
+      prober: http
+      timeout: 10s
+      http:
+        preferred_ip_protocol: ip4
+        follow_redirects: true
+    tcp_connect:
+      prober: tcp
+      timeout: 10s
+
+# Probe in-cluster Service DNS names for services inside this cluster. Where hairpin NAT is not
+# supported, pods cannot reach the cluster's own ingress hostnames, and every such probe fails.
+serviceMonitor:
+  enabled: true
+  targets: []
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    memory: 64Mi

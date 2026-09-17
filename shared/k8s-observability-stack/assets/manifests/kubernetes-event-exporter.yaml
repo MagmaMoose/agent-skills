@@ -1,0 +1,130 @@
+# kubernetes-event-exporter (resmoio fork), one replica, events to stdout as JSON so the log
+# collector ships them to Loki. Invariant 6: one replica and Recreate, unless leader election is on.
+# Pin the image you verified. Placeholders look like <this>.
+# The checkov.io/skip annotations are for the template (placeholder tags, no NetworkPolicy): drop each
+# one the generated manifest satisfies.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubernetes-event-exporter
+  namespace: <namespace>
+---
+# The built-in `view` role: events plus read access to the objects they reference, for enrichment.
+# Not a `*` wildcard, which would include every Secret in the cluster.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubernetes-event-exporter
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+  - kind: ServiceAccount
+    name: kubernetes-event-exporter
+    namespace: <namespace>
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubernetes-event-exporter
+  namespace: <namespace>
+data:
+  config.yaml: |
+    logLevel: error
+    logFormat: json
+    # A restart must not replay old events.
+    maxEventAgeSeconds: 60
+    route:
+      routes:
+        - match:
+            - receiver: stdout
+    receivers:
+      - name: stdout
+        stdout:
+          deDot: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubernetes-event-exporter
+  namespace: <namespace>
+  labels:
+    app.kubernetes.io/name: kubernetes-event-exporter
+  annotations:
+    checkov.io/skip1: "CKV_K8S_38=Watches events through the Kubernetes API"
+    checkov.io/skip2: "CKV_K8S_43=Template: the tag is a placeholder; pin the digest when generating"
+    checkov.io/skip3: "CKV_K8S_15=Template: pull policy is a cluster decision (registry mirrors, air gap)"
+    checkov.io/skip4: "CKV2_K8S_6=Template: NetworkPolicy depends on the CNI; add one where it is enforced"
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kubernetes-event-exporter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kubernetes-event-exporter
+    spec:
+      serviceAccountName: kubernetes-event-exporter
+      # Watches the API. Explicit, for clusters whose policy defaults this to false.
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: kubernetes-event-exporter
+          image: ghcr.io/resmoio/kubernetes-event-exporter:<version>
+          args:
+            - -conf=/data/config.yaml
+          ports:
+            - name: metrics
+              containerPort: 2112
+          # Served next to /metrics (pkg/metrics in the exporter).
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: metrics
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: metrics
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: config
+              mountPath: /data
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: kubernetes-event-exporter
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: kubernetes-event-exporter
+  namespace: <namespace>
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kubernetes-event-exporter
+  podMetricsEndpoints:
+    - port: metrics

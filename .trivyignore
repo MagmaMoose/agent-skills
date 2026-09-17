@@ -1,0 +1,5 @@
+# KSV-0125: ghcr.io/resmoio (kubernetes-event-exporter), quay.io/thanos (Thanos),
+# and docker.io/prom (memcached-exporter) are the canonical upstream registries
+# for these projects. Treating them as untrusted requires a site-specific registry
+# allowlist configuration, which is beyond the scope of these reference manifests.
+KSV-0125

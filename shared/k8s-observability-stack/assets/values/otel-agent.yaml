@@ -1,0 +1,104 @@
+# OpenTelemetry collector, node agent (DaemonSet), `opentelemetry-collector` chart.
+#
+# Receives OTLP from workloads on its node, adds Kubernetes metadata, and forwards to the gateway.
+# Traces go through the traceID-aware load_balancing exporter so tail sampling sees whole traces
+# (invariant 15). A starting shape, not a version source. Placeholders look like <this>.
+
+mode: daemonset
+fullnameOverride: otel-agent
+
+image:
+  repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-k8s
+command:
+  name: otelcol-k8s
+
+presets:
+  kubernetesAttributes:
+    enabled: true
+  # Container log collection (file_log receiver). ON by default: without it, and without another
+  # collector, no container log ever reaches Loki. Turn it OFF when another agent already tails
+  # container logs on these nodes (invariant 16). It needs hostPath mounts, which Pod Security
+  # baseline forbids (architecture.md).
+  logsCollection:
+    enabled: true
+    storeCheckpoints: true
+
+# Cover every node that runs workloads, including tainted ones. The chart ships no tolerations.
+tolerations:
+  - operator: Exists
+
+# Workloads send to the node-local agent, either through this Service (the chart sets
+# internalTrafficPolicy Local for a DaemonSet) or to the node IP on the OTLP hostPorts.
+service:
+  enabled: true
+
+ports:
+  jaeger-compact:
+    enabled: false
+  jaeger-thrift:
+    enabled: false
+  jaeger-grpc:
+    enabled: false
+  zipkin:
+    enabled: false
+  metrics:
+    enabled: true
+
+config:
+  receivers:
+    jaeger: null
+    zipkin: null
+    prometheus: null
+  processors:
+    batch:
+      send_batch_size: 1024
+      timeout: 5s
+  exporters:
+    debug: null
+    load_balancing:
+      routing_key: traceID
+      protocol:
+        otlp:
+          tls:
+            insecure: true
+      resolver:
+        dns:
+          hostname: otel-gateway.<namespace>.svc.cluster.local
+          port: 4317
+    otlp_grpc/gateway:
+      endpoint: otel-gateway.<namespace>.svc.cluster.local:4317
+      tls:
+        insecure: true
+  service:
+    pipelines:
+      traces:
+        receivers:
+          - otlp
+        processors:
+          - memory_limiter
+          - k8s_attributes
+          - batch
+        exporters:
+          - load_balancing
+      # The logsCollection preset adds its file_log receiver to this pipeline.
+      logs:
+        receivers:
+          - otlp
+        processors:
+          - memory_limiter
+          - k8s_attributes
+          - batch
+        exporters:
+          - otlp_grpc/gateway
+      metrics: null
+
+# A PodMonitor, so every agent pod is scraped rather than whichever one the Service picks.
+podMonitor:
+  enabled: true
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
