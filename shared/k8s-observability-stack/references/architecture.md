@@ -236,7 +236,7 @@ replica counts changed.
   those nodes. Some charts ship them (node-exporter tolerates all `NoSchedule` taints by default);
   the OpenTelemetry collector chart ships none.
 - **Network access.** Most of the stack serves unauthenticated APIs: Prometheus (including the remote
-  write receiver Tempo needs), the Thanos sidecar's StoreAPI, Loki, Tempo's receivers and query API,
+  write receiver Tempo needs), every Thanos component, Loki, Tempo's receivers and query API,
   memcached. Where the CNI enforces NetworkPolicy, give each an ingress policy that admits only its
   callers, and list them in the output README. A namespace left out of a default-deny baseline gets no
   protection otherwise. The callers in the reference architecture:
@@ -246,15 +246,21 @@ replica counts changed.
   | Prometheus | web (9090) | Tempo's metrics-generator, Prometheus itself |
   | Prometheus | Thanos sidecar gRPC (10901) | thanos-query |
   | Prometheus | sidecar and config-reloader HTTP | Prometheus |
+  | thanos-query | HTTP (9090) | Grafana, Thanos Ruler, other PromQL readers, Prometheus |
+  | thanos-store, Thanos Ruler | gRPC (10901) | thanos-query |
+  | thanos-store, thanos-compactor, Thanos Ruler | HTTP (10902) | Prometheus |
   | Tempo | OTLP gRPC (4317) | otel-gateway |
   | Tempo | HTTP (3200) | Grafana, Prometheus |
   | Loki | HTTP (3100) | the log collector, Grafana, Prometheus, other Loki pods |
   | Loki | gRPC (9095), memberlist (7946 TCP and UDP) | other Loki pods |
   | memcached | 11211 | Loki, thanos-store |
   | memcached | exporter port | Prometheus |
+  | x509-certificate-exporter | metrics (9793) | Prometheus |
+  | Postgres (Grafana's database) | 5432 | Grafana |
 
-  Readers outside the stack (an AI assistant, a rightsizing job, a Grafana in another namespace) go
-  through thanos-query or need their own rule. Take pod labels from the rendered charts, not from
+  Admit pods, not the whole observability namespace: it also runs exporters and jobs that call
+  nothing. Readers outside the stack (an AI assistant, a rightsizing job, a Grafana in another
+  namespace) go through thanos-query and need their own rule there. Take pod labels from the rendered charts, not from
   memory: the OpenTelemetry collector chart labels its pods `app.kubernetes.io/name:
   opentelemetry-collector`, whatever the release is called.
 - **API access.** Components that call the Kubernetes API need a service account token:

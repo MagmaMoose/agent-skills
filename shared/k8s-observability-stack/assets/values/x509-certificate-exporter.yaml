@@ -5,6 +5,11 @@
 # and on self-managed control planes those directories hold CA and client private keys and admin
 # kubeconfigs. Check API server certificates over TLS instead: manifests/apiserver-tls-probe.yaml.
 #
+# The Secrets exporter reads Secrets cluster-wide: RBAC cannot filter by Secret type, and the chart
+# renders a ClusterRole even with includeNamespaces, which filters inside the exporter. Say so in the
+# output README, and give the pod an ingress policy that admits only Prometheus (architecture.md,
+# Network access). Where cert-manager issues every certificate, its own metrics may be enough.
+#
 # The chart does not set automountServiceAccountToken on the pod. Where a cluster policy defaults it
 # to false, the Secrets exporter (which reads Secrets through the API) needs it set to true, for
 # example with a Flux postRenderers patch.
