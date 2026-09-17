@@ -274,7 +274,7 @@ grafana:
     - name: Metrics
       uid: metrics
       type: prometheus
-      url: http://thanos-query.<namespace>.svc.cluster.local:9090  # nosemgrep: DS137138
+      url: http://thanos-query.<namespace>.svc.cluster.local:9090  # nosemgrep: DS137138  DevSkim: ignore DS137138
       access: proxy
       isDefault: true
       jsonData:
@@ -286,7 +286,7 @@ grafana:
     - name: Logs
       uid: logs
       type: loki
-      url: http://loki-read.<loki-namespace>.svc.cluster.local:3100  # nosemgrep: DS137138
+      url: http://loki-read.<loki-namespace>.svc.cluster.local:3100  # nosemgrep: DS137138  DevSkim: ignore DS137138
       access: proxy
       jsonData:
         maxLines: 1000
@@ -306,7 +306,7 @@ grafana:
     - name: Traces
       uid: tempo
       type: tempo
-      url: http://tempo.<namespace>.svc.cluster.local:3200  # nosemgrep: DS137138
+      url: http://tempo.<namespace>.svc.cluster.local:3200  # nosemgrep: DS137138  DevSkim: ignore DS137138
       access: proxy
       jsonData:
         tracesToLogsV2:

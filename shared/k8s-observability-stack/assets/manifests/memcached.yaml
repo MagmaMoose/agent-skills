@@ -90,8 +90,7 @@ spec:
         - name: exporter
           image: prom/memcached-exporter:<exporter-version>
           args:
-            # DS162092: exporter connects to the co-located memcached container; localhost is intentional, not debug code.
-            - --memcached.address=localhost:11211
+            - --memcached.address=localhost:11211  # DevSkim: ignore DS162092 - exporter connects to the co-located memcached container; localhost is intentional, not debug code.
           ports:
             - name: metrics
               containerPort: 9150
