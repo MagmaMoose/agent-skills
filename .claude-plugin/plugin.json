@@ -1,8 +1,8 @@
 {
   "name": "claude-skills",
   "displayName": "MagmaMoose Agent Skills for Claude",
-  "version": "0.8.0",
-  "description": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, Kubernetes platform audit, Kubernetes observability stack, codebase prune, architecture diagrams, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for Claude Code. The claude-skills name is kept to preserve slash commands.",
+  "version": "0.9.0",
+  "description": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stack, codebase prune, architecture diagrams, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for Claude Code. The claude-skills name is kept to preserve slash commands.",
   "author": {
     "name": "Caleb Sargeant",
     "email": "caleb@magmamoose.com",
@@ -17,6 +17,9 @@
     "code-review",
     "documentation",
     "mkdocs",
+    "anonymisation",
+    "redaction",
+    "docs-distributor",
     "kubernetes",
     "k8s",
     "platform-audit",
