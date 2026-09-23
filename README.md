@@ -2,7 +2,7 @@
 
 Shared agent workflows for the MagmaMoose stack, packaged for Claude Code and Codex.
 
-This repository keeps one source of truth for PR review, PR triage, post-gate security and quality review, documentation sync, Kubernetes platform audit, Kubernetes observability stacks, codebase prune, architecture diagrams, tvOS SwiftUI, and context optimisation work. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
+This repository keeps one source of truth for PR review, PR triage, post-gate security and quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stacks, codebase prune, architecture diagrams, tvOS SwiftUI, and context optimisation work. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
 
 Do not fork these workflows per project. Put project-specific rules in the target repository's `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, or relevant `README.md` files. The adapters instruct agents to read those files before acting and to treat explicit hard rules as blockers.
 
@@ -17,6 +17,7 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | Chargate security review | `/claude-skills:chargate-security-review` | `chargate-security-review` |
 | Brimyr quality review | `/claude-skills:brimyr-quality-review` | `brimyr-quality-review` |
 | Docs sync | `/claude-skills:docs-update` | `docs-update` |
+| Docs anonymisation | `/claude-skills:docs-anonymise` | `docs-anonymise` |
 | Kubernetes audit | `/claude-skills:k8s-audit` | `k8s-audit` |
 | Kubernetes observability stack | `/claude-skills:k8s-observability-stack` | `k8s-observability-stack` |
 | Codebase prune | `/claude-skills:codebase-prune` | `codebase-prune` |
@@ -47,6 +48,15 @@ halves of the job: fixing what the recent changes made wrong, and sweeping the w
 against a 30-surface checklist so gaps that were never documented stop being invisible. Every
 run ends with a coverage matrix that gives each surface a status, so "we didn't look there" can't
 hide.
+
+`docs-anonymise` is the human half of
+[docs-distributor](https://github.com/MagmaMoose/docs-distributor), which publishes private
+documentation into a public docs site through a private mapping and a deterministic leak gate.
+The tool never decides what is sensitive; this workflow does. It holds the replace-or-keep
+policy and the placeholder scheme, triages a sync the novelty gate blocked (read the private
+proposal, decide each term, write rules that survive the gate, prove them with an offline plan),
+and onboards a new source. Its first rule is that a real value never reaches public text, and
+neither does a pointer to where a leak is: not a commit, a PR body, an issue or a comment.
 
 `k8s-audit` audits a Kubernetes platform against a world-class bar. It is built on one rule that
 most audits get wrong: a repository audit and a live-cluster audit find different things, so it does
