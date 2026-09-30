@@ -2,8 +2,8 @@
   "generated": "2026-09-30",
   "summary": "Shared agent workflows for Claude Code and Codex, covering PR review, PR triage, post-gate security and quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stack, codebase prune, architecture diagrams, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, and context optimisation. Canonical logic lives in shared/; commands/ and skills/ are thin adapters for their respective platforms. Scripts provide standalone harvesters and payload builders used by the heavier workflows.",
   "entrypoints": [
-    "commands/pr-review.md: Claude Code slash commands — each file in commands/ is /claude-skills:{stem}",
-    "skills/pr-review/SKILL.md: Codex skills — each subdirectory in skills/ is a Codex skill named by dirname",
+    "commands/pr-review.md: Claude Code slash commands \u2014 each file in commands/ is /claude-skills:{stem}",
+    "skills/pr-review/SKILL.md: Codex skills \u2014 each subdirectory in skills/ is a Codex skill named by dirname",
     "scripts/build-review-payload.py: standalone payload builder for pr-review",
     "scripts/docs-audit.py: standalone docs auditor for docs-update",
     "scripts/k8s-harvest.sh: standalone cluster harvester for k8s-audit",
@@ -26,6 +26,7 @@
         "k8s-observability-stack/assets/{values,manifests,flux}/*",
         "codebase-prune.md",
         "context-optimise.md",
+        "brag-profile.md",
         "diagram-draw.md",
         "swiftui-build.md",
         "macos-swiftui.md",
@@ -42,27 +43,53 @@
       "path": "commands/",
       "purpose": "Claude Code slash command adapters (namespace: claude-skills). Each file delegates to shared/. Two deprecated aliases forward to renamed workflows.",
       "exports": [
-        "pr-review.md", "pr-triage.md", "chargate-security-review.md",
-        "brimyr-quality-review.md", "docs-update.md", "docs-anonymise.md", "k8s-audit.md",
-        "k8s-observability-stack.md", "codebase-prune.md", "context-optimise.md", "diagram-draw.md", "swiftui-build.md", "macos-swiftui.md",
+        "pr-review.md",
+        "pr-triage.md",
+        "chargate-security-review.md",
+        "brimyr-quality-review.md",
+        "docs-update.md",
+        "docs-anonymise.md",
+        "k8s-audit.md",
+        "k8s-observability-stack.md",
+        "codebase-prune.md",
+        "context-optimise.md",
+        "brag-profile.md",
+        "diagram-draw.md",
+        "swiftui-build.md",
+        "macos-swiftui.md",
         "mikrotik-routeros.md",
         "tvos-swiftui.md (deprecated -> swiftui-build)",
         "update-docs.md (deprecated -> docs-update)"
       ],
-      "depends_on": ["shared"]
+      "depends_on": [
+        "shared"
+      ]
     },
     "skills": {
       "path": "skills/",
       "purpose": "Codex skill adapters. Each subdirectory contains SKILL.md delegating to shared/.",
       "exports": [
-        "pr-review", "pr-triage", "chargate-security-review",
-        "brimyr-quality-review", "docs-update", "docs-anonymise", "k8s-audit",
-        "k8s-observability-stack", "codebase-prune", "context-optimise", "diagram-draw", "swiftui-build", "macos-swiftui",
+        "pr-review",
+        "pr-triage",
+        "chargate-security-review",
+        "brimyr-quality-review",
+        "docs-update",
+        "docs-anonymise",
+        "k8s-audit",
+        "k8s-observability-stack",
+        "codebase-prune",
+        "context-optimise",
+        "brag-profile",
+        "diagram-draw",
+        "swiftui-build",
+        "macos-swiftui",
         "mikrotik-routeros",
         "tvos-swiftui (deprecated -> swiftui-build)",
         "update-docs (deprecated -> docs-update)"
       ],
-      "depends_on": ["shared"]
+      "depends_on": [
+        "shared"
+      ]
     },
     "scripts": {
       "path": "scripts/",
@@ -71,63 +98,87 @@
         "build-review-payload.py: assembles GitHub review payload for pr-review (optional; pr-review falls back if missing)",
         "docs-audit.py: mechanical docs audit for docs-update",
         "k8s-harvest.sh: read-only cluster dump for k8s-audit; never harvests secret values",
-        "cruft-harvest.sh: read-only repo dump for codebase-prune; universe is git ls-files"
+        "cruft-harvest.sh: read-only repo dump for codebase-prune; universe is git ls-files",
+        "brag-harvest.sh: read-only brand, copy and claim dump for brag-profile; strips token rationale comments; universe is git ls-files"
       ],
       "depends_on": []
     },
     "claude-plugin": {
       "path": ".claude-plugin/",
       "purpose": "Claude Code plugin manifests. marketplace.json for registry; plugin.json defines the claude-skills plugin (version 0.9.0). Namespace stays claude-skills for backward compatibility.",
-      "exports": ["marketplace.json", "plugin.json"],
+      "exports": [
+        "marketplace.json",
+        "plugin.json"
+      ],
       "depends_on": []
     },
     "codex-plugin": {
       "path": ".codex-plugin/",
       "purpose": "Codex plugin manifest. plugin.json defines the agent-skills Codex plugin (version 1.8.0).",
-      "exports": ["plugin.json"],
+      "exports": [
+        "plugin.json"
+      ],
       "depends_on": []
     },
     "agents-plugins": {
       "path": ".agents/plugins/",
       "purpose": "Codex marketplace reference.",
-      "exports": ["marketplace.json"],
+      "exports": [
+        "marketplace.json"
+      ],
       "depends_on": []
     }
   },
   "callgraph_highlights": [
     {
       "caller": "commands/pr-review.md",
-      "calls": ["shared/pr-review.md"],
+      "calls": [
+        "shared/pr-review.md"
+      ],
       "note": "shared/pr-review.md optionally uses scripts/build-review-payload.py; falls back to hand-written payload when missing"
     },
     {
       "caller": "commands/docs-update.md",
-      "calls": ["shared/docs-update.md"],
+      "calls": [
+        "shared/docs-update.md"
+      ],
       "note": "shared/docs-update.md uses scripts/docs-audit.py for the mechanical audit half"
     },
     {
       "caller": "commands/k8s-audit.md",
-      "calls": ["shared/k8s-audit.md"],
+      "calls": [
+        "shared/k8s-audit.md"
+      ],
       "note": "shared/k8s-audit.md uses scripts/k8s-harvest.sh for the single read-only cluster harvest"
     },
     {
       "caller": "commands/codebase-prune.md",
-      "calls": ["shared/codebase-prune.md"],
+      "calls": [
+        "shared/codebase-prune.md"
+      ],
       "note": "shared/codebase-prune.md uses scripts/cruft-harvest.sh for the read-only repo dump"
     },
     {
       "caller": "commands/k8s-observability-stack.md",
-      "calls": ["shared/k8s-observability-stack.md", "shared/k8s-observability-stack/references/*.md"],
+      "calls": [
+        "shared/k8s-observability-stack.md",
+        "shared/k8s-observability-stack/references/*.md"
+      ],
       "note": "shared/k8s-observability-stack.md is a router; architecture.md and invariants.md always load, the other references and the assets/ templates load per step"
     },
     {
       "caller": "commands/mikrotik-routeros.md",
-      "calls": ["shared/mikrotik-routeros.md", "shared/mikrotik/*.md"],
+      "calls": [
+        "shared/mikrotik-routeros.md",
+        "shared/mikrotik/*.md"
+      ],
       "note": "shared/mikrotik-routeros.md is a dispatch page; the agent loads only the deeper mikrotik/ file it needs"
     },
     {
       "caller": "skills/{workflow}/SKILL.md",
-      "calls": ["shared/{workflow}.md"],
+      "calls": [
+        "shared/{workflow}.md"
+      ],
       "note": "All Codex skills follow the same delegation pattern as their commands/ counterparts"
     }
   ],
