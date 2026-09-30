@@ -1,7 +1,7 @@
 {
   "name": "agent-skills",
-  "version": "1.8.0",
-  "description": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stack, codebase prune, architecture diagrams, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for MagmaMoose agents.",
+  "version": "1.9.0",
+  "description": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stack, codebase prune, architecture diagrams, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, context optimisation, and launch-video brand profiling workflows for MagmaMoose agents.",
   "author": {
     "name": "Caleb Sargeant",
     "email": "caleb@magmamoose.com",
@@ -46,13 +46,16 @@
     "networking",
     "context-engineering",
     "claude-md",
+    "brag",
+    "launch-video",
+    "brand-tokens",
     "automation"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "MagmaMoose Agent Skills",
-    "shortDescription": "Shared PR review, triage, post-gate security review, post-gate quality review, docs sync, docs anonymisation, Kubernetes audit, Kubernetes observability stack, codebase prune, architecture diagrams, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows.",
-    "longDescription": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stack, codebase prune, architecture diagrams, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, and context optimisation workflows for MagmaMoose agents, packaged as reusable Codex skills.",
+    "shortDescription": "Shared PR review, triage, post-gate security review, post-gate quality review, docs sync, docs anonymisation, Kubernetes audit, Kubernetes observability stack, codebase prune, architecture diagrams, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, context optimisation, and launch-video brand profiling workflows.",
+    "longDescription": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stack, codebase prune, architecture diagrams, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, context optimisation, and launch-video brand profiling workflows for MagmaMoose agents, packaged as reusable Codex skills.",
     "developerName": "MagmaMoose",
     "category": "Productivity",
     "capabilities": [
@@ -73,7 +76,8 @@
       "Use the swiftui-build skill on issue 42.",
       "Use the context-optimise skill to set up the context stack in this repo.",
       "Use the mikrotik-routeros skill to review a script that configures a RouterOS device.",
-      "Use the diagram-draw skill to diagram this system's architecture."
+      "Use the diagram-draw skill to diagram this system's architecture.",
+      "Use the brag-profile skill to cache this repo's brand facts and make a launch video."
     ]
   }
 }
