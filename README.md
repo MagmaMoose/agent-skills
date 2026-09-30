@@ -24,6 +24,7 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | tvOS SwiftUI | `/claude-skills:swiftui-build` | `swiftui-build` |
 | macOS SwiftUI | `/claude-skills:macos-swiftui` | `macos-swiftui` |
 | Context stack | `/claude-skills:context-optimise` | `context-optimise` |
+| Brag profile | `/claude-skills:brag-profile` | `brag-profile` |
 | MikroTik RouterOS | `/claude-skills:mikrotik-routeros` | `mikrotik-routeros` |
 | Architecture diagram | `/claude-skills:diagram-draw` | `diagram-draw` |
 
@@ -148,6 +149,24 @@ skeleton that `docs-update` fills later. It is built on the distinction most con
 the goal is signal per token, not fewer tokens. Deleting the footguns file measures as a win in the
 current session and costs the same bug three more times next month, so an existing `CLAUDE.md` is
 never trimmed away, only folded in, and the run reports line by line what moved where.
+
+`brag-profile` puts a cache in front of the launch-video workflow so a repository pays for brand
+and product discovery once rather than on every run. A launch video needs a narrow, slow-moving
+set of facts: the palette, the faces, the marketing copy word for word, which two or three
+screens carry the product's flow, and which sentences the product is allowed to say out loud.
+`scripts/brag-harvest.sh` extracts those read-only into seven small files, and the run writes
+`.claude/brag/profile.md` into the target repository beside a saved composition template and an
+append-only ledger of the failures that cost round trips.
+
+The section that pays for it is the design tokens. A mature house token file can carry a
+paragraph of rationale per token, so the obvious grep returns tens of thousands of tokens of
+prose to recover fifteen hex values; the harvest strips the comments and keeps the values. The
+section that matters most is the other one: `50-constraints.txt` collects the claim modules and
+the copy rules, because a launch video is public and permanent and the rule about what a product
+may assert is usually written in exactly one file that a run reading only the landing page would
+never open. The claimed saving is deliberately modest, about a third off a repeat run, and none
+of it comes from skipping verification — on the run it was measured against, the visual pass
+caught four defects that no automated gate reported.
 
 The Claude command namespace remains `claude-skills` for backward compatibility with existing users and headless installs.
 
@@ -281,6 +300,19 @@ and which had only grep is itself a finding.
 
 ```bash
 scripts/cruft-harvest.sh . ./harvest/cruft
+```
+
+`scripts/brag-harvest.sh` does the evidence half of `brag-profile`: one read-only dump of a
+product's brand and copy facts, covering identity, CSS custom properties with their rationale
+comments stripped, `@font-face` families and the local files behind them, verbatim marketing copy
+read as whole text nodes rather than single lines, the screen inventory as names only, and the
+claim modules and copy rules a public video must not contradict. The file universe is
+`git ls-files`. It never writes inside the repo, never installs anything and never starts the
+app; a missing `python3` is recorded in `90-tooling.txt` and the extraction falls back to grep,
+which is noisier, so the reader can tell how much to trust each section.
+
+```bash
+scripts/brag-harvest.sh . ./harvest/brag
 ```
 
 ## License
