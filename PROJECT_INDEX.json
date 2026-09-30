@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-23",
+  "generated": "2026-09-30",
   "summary": "Shared agent workflows for Claude Code and Codex, covering PR review, PR triage, post-gate security and quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stack, codebase prune, architecture diagrams, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, and context optimisation. Canonical logic lives in shared/; commands/ and skills/ are thin adapters for their respective platforms. Scripts provide standalone harvesters and payload builders used by the heavier workflows.",
   "entrypoints": [
     "commands/pr-review.md: Claude Code slash commands — each file in commands/ is /claude-skills:{stem}",
