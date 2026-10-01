@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-30",
+  "generated": "2026-10-01",
   "summary": "Shared agent workflows for Claude Code and Codex, covering PR review, PR triage, post-gate security and quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stack, codebase prune, architecture diagrams, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, and context optimisation. Canonical logic lives in shared/; commands/ and skills/ are thin adapters for their respective platforms. Scripts provide standalone harvesters and payload builders used by the heavier workflows.",
   "entrypoints": [
     "commands/pr-review.md: Claude Code slash commands \u2014 each file in commands/ is /claude-skills:{stem}",
@@ -35,7 +35,8 @@
         "mikrotik/operations.md",
         "mikrotik/scripting.md",
         "mikrotik/security.md",
-        "mikrotik/upgrades.md"
+        "mikrotik/upgrades.md",
+        "catchup-write.md"
       ],
       "depends_on": []
     },
@@ -59,7 +60,8 @@
         "macos-swiftui.md",
         "mikrotik-routeros.md",
         "tvos-swiftui.md (deprecated -> swiftui-build)",
-        "update-docs.md (deprecated -> docs-update)"
+        "update-docs.md (deprecated -> docs-update)",
+        "catchup-write.md"
       ],
       "depends_on": [
         "shared"
@@ -85,7 +87,8 @@
         "macos-swiftui",
         "mikrotik-routeros",
         "tvos-swiftui (deprecated -> swiftui-build)",
-        "update-docs (deprecated -> docs-update)"
+        "update-docs (deprecated -> docs-update)",
+        "catchup-write"
       ],
       "depends_on": [
         "shared"
