@@ -2,7 +2,7 @@
 
 Shared agent workflows for the MagmaMoose stack, packaged for Claude Code and Codex.
 
-This repository keeps one source of truth for PR review, PR triage, post-gate security and quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stacks, codebase prune, architecture diagrams, tvOS SwiftUI, and context optimisation work. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
+This repository keeps one source of truth for PR review, PR triage, post-gate security and quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stacks, codebase prune, architecture diagrams, tvOS SwiftUI, and context optimisation, and welcome-back report work. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
 
 Do not fork these workflows per project. Put project-specific rules in the target repository's `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, or relevant `README.md` files. The adapters instruct agents to read those files before acting and to treat explicit hard rules as blockers.
 
@@ -27,6 +27,7 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | Brag profile | `/claude-skills:brag-profile` | `brag-profile` |
 | MikroTik RouterOS | `/claude-skills:mikrotik-routeros` | `mikrotik-routeros` |
 | Architecture diagram | `/claude-skills:diagram-draw` | `diagram-draw` |
+| Welcome-back report | `/claude-skills:catchup-write` | `catchup-write` |
 
 `chargate-security-review` runs once the Chargate gate has finished and reviews the same diff Chargate
 just scanned — for the things a scanner structurally cannot find. Chargate matches patterns; this reads the
@@ -167,6 +168,16 @@ may assert is usually written in exactly one file that a run reading only the la
 never open. The claimed saving is deliberately modest, about a third off a repeat run, and none
 of it comes from skipping verification — on the run it was measured against, the visual pass
 caught four defects that no automated gate reported.
+
+`catchup-write` writes the report a colleague wants on their first morning back from leave:
+what shipped, what was discussed, what is waiting for them, opening with a short animated recap.
+It drives the [catchup](https://github.com/MagmaMoose/catchup) CLI rather than the connector
+tools, because one calendar search alone returns tens of thousands of characters of attendee
+lists. The CLI filters and counts in code and hands the writer a pack cut to about 28k tokens.
+Privacy is enforced where the data is collected, not in the prompt. Only meetings the colleague
+was invited to, chats they are in and channels they post in are read, so the user's own
+one-to-ones never reach the page. Meeting notes come from Grimoire, including Teams transcripts
+downloaded by hand where a tenant blocks transcript access.
 
 The Claude command namespace remains `claude-skills` for backward compatibility with existing users and headless installs.
 
