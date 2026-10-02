@@ -14,8 +14,8 @@ It lives at the first of these paths that exists (check in order):
 2. `${CLAUDE_PLUGIN_ROOT}/shared/pr-review.md` — installed as a plugin
 3. `shared/pr-review.md` — working inside the agent-skills checkout
 
-Then read:
-- The target repository's `CLAUDE.md`
+Then read, once each:
+- The target repository's `CLAUDE.md`, unless Claude Code already loaded it into your context
 - The target repository's `AGENTS.md`
 - The target repository's `CONTRIBUTING.md`
 - Relevant `README.md` files

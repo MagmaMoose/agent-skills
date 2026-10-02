@@ -5,10 +5,10 @@ description: Triage a GitHub PR by reading all review comments, security finding
 
 Use the shared MagmaMoose PR triage workflow.
 
-Read and follow:
+Read and follow, once each:
 - `shared/pr-triage.md`
 - The target repository's `CLAUDE.md`
-- The target repository's `AGENTS.md`
+- The target repository's `AGENTS.md`, unless Codex already loaded it into your context
 - The target repository's `CONTRIBUTING.md`
 - Relevant `README.md` files
 
