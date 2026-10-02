@@ -43,7 +43,8 @@ repo wins over the rubric.
 - **Don't deny what the repo needs.** A permission rule that blocks a command the test or build
   path runs is a broken repo, not a hardened one. Check each rule before adding it.
 - **Idempotent.** A second run must not duplicate sections, re-append the maintenance block, or
-  clobber hand-written content.
+  clobber hand-written content. On a repo whose stack is already accurate it changes nothing,
+  and `generated` in `PROJECT_INDEX.json` only ever moves in an edit that changes something else.
 - **Scaffold `./docs`, don't write it.** Filling the pages is `/claude-skills:docs-update`'s job
   against its own 30-surface sweep. Never introduce a second docs system alongside an existing one.
 - **Name only commands that resolve.** Check `~/.claude/commands/` and `.claude/commands/` before
@@ -54,6 +55,7 @@ repo wins over the rubric.
   resolves, and run `mkdocs build` or name the exact missing dependency. Never claim a check you
   didn't run.
 - **Write the changes, then show them.** Don't stop mid-run to ask permission. Never commit, push,
-  or open a PR — end with a dirty working tree and a report.
+  or open a PR. End with your edits in the working tree and a report, or with a clean tree and a
+  report saying so when nothing needed changing.
 
 Scope hint: $ARGUMENTS

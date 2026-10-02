@@ -56,15 +56,17 @@ Binding on every file you write here, and on the report at the end.
   read out of `package.json`, `Makefile`, `pyproject.toml`, `justfile`, `Cargo.toml`, a CI
   workflow, or the repo's own README in this run. If you cannot find one, say so and leave it out.
 - **Idempotent.** Running this a second time must not duplicate sections, re-append the
-  maintenance block, or clobber hand-written content. Read what exists, then merge.
+  maintenance block, or clobber hand-written content. Read what exists, then merge. On a repo
+  whose stack is already accurate, a run changes nothing at all, not even a date.
 - **Never write a secret into a file you create.** Not a token, not an internal hostname, not a
   production URL. Placeholders only.
 - **Never add a dependency to the target repository** to make a layer work. If MkDocs is not
   installed, report the install command; don't add it to a lockfile.
 - **Write the changes, then show them.** Don't stop mid-run to ask permission for each file. Make
   the edits, verify, then report.
-- **Never commit, push, or open a PR** unless explicitly asked. The run ends with a dirty working
-  tree and a report.
+- **Never commit, push, or open a PR** unless explicitly asked, and never for a run that changed
+  nothing. The run ends with its edits in the working tree and a report. When nothing needed
+  changing, the tree stays clean and the report says so: no commit, no PR.
 
 ## 0. Read the repo before you write anything
 
@@ -102,7 +104,7 @@ Write `PROJECT_INDEX.json` at the repo root:
 
 ```json
 {
-  "generated": "<ISO-8601 date>",
+  "generated": "<ISO-8601 date the content below last changed>",
   "summary": "<2-3 sentences: what this repo is and what it does>",
   "entrypoints": ["<file>:<symbol>"],
   "modules": {
@@ -118,6 +120,10 @@ Rules that make the difference between an index and a liability:
 - **Meaningful modules only.** Not every file. If a directory has no purpose you can state in one
   clause, it is not a module.
 - **Under ~300 lines.** A map you have to search is not a map.
+- **`generated` moves only with the content.** Set it in the same edit that changes something
+  else in the file, and never on its own. A refresh that finds the index still true leaves the
+  file exactly as it was: a date-only diff tells nobody anything, and on a schedule it costs a
+  pull request and a review every week.
 - **Load it on demand, by path.** Put this line in `CLAUDE.md`: `Before locating unfamiliar code,
   read ./PROJECT_INDEX.json first.` **Never `@`-import it** — an `@`-import puts the whole file in
   context on every session and converts your index into exactly the tax it was built to avoid.
@@ -343,9 +349,14 @@ Add verbatim to `CLAUDE.md`, adjusted so every command named actually resolves (
 - Architectural decision: write it to .claude/decisions/ (run /adr if installed).
 - Public behaviour, API, config or setup changed: sync ./docs (run /claude-skills:docs-update).
 - PROJECT_INDEX.json stale after a new module or a big refactor: regenerate the affected modules
-  section only, and update "generated".
+  section only, and update "generated" in that same edit. Never change "generated" on its own.
 - Keep CLAUDE.md under ~500 tokens. Push detail into on-demand .claude/ files.
 ```
+
+If `CLAUDE.md` already has a `[maintenance]` block whose `PROJECT_INDEX.json` line ends
+`and update "generated".` (in quotes or backticks), that is this line's older wording: replace
+that one line with the one above. Left alone, it turns every scheduled refresh into a date-only
+diff.
 
 ## 7. Verify
 
@@ -371,7 +382,9 @@ tripwire. Target under ~1,000 tokens for the total. Over budget means moving det
 files, not deleting it. In an interactive Claude Code session, `/context` gives the real number.
 
 **2. The index is true.** Re-run the missing-paths check from section 1. Zero missing paths, every
-major module present, hotspots derived from `git log` and not from guesswork.
+major module present, hotspots derived from `git log` and not from guesswork. If
+`git diff PROJECT_INDEX.json` shows `generated` as the only changed line, nothing in the index
+changed: restore it with `git checkout -- PROJECT_INDEX.json`.
 
 **3. Access control is real and not self-defeating.** `.gitignore` covers what the build generates;
 `settings.json` denies secrets; `settings.local.json` is gitignored; no `.claudeignore` exists; no
@@ -431,4 +444,5 @@ The failure modes, in the order they actually show up:
 - Every command written into a file was read out of this repo in this run.
 - No `.claudeignore`, no secrets in any file created, no dependency added to the repo.
 - Every verification check run, with its real output in the report.
-- Working tree dirty, nothing committed, nothing pushed.
+- Edits left in the working tree, nothing committed, nothing pushed. A run that found nothing to
+  change leaves the tree clean, `generated` included.

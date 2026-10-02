@@ -149,7 +149,9 @@ acts before output reaches the context window, somewhere for session memory to l
 skeleton that `docs-update` fills later. It is built on the distinction most context cleanups miss:
 the goal is signal per token, not fewer tokens. Deleting the footguns file measures as a win in the
 current session and costs the same bug three more times next month, so an existing `CLAUDE.md` is
-never trimmed away, only folded in, and the run reports line by line what moved where.
+never trimmed away, only folded in, and the run reports line by line what moved where. A re-run on
+a repository whose stack is still accurate changes nothing, not even the index's `generated` date,
+so a scheduled refresh has nothing to commit.
 
 `brag-profile` puts a cache in front of the launch-video workflow so a repository pays for brand
 and product discovery once rather than on every run. A launch video needs a narrow, slow-moving
