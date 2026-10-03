@@ -384,7 +384,19 @@ files, not deleting it. In an interactive Claude Code session, `/context` gives 
 **2. The index is true.** Re-run the missing-paths check from section 1. Zero missing paths, every
 major module present, hotspots derived from `git log` and not from guesswork. If
 `git diff PROJECT_INDEX.json` shows `generated` as the only changed line, nothing in the index
-changed: restore it with `git checkout -- PROJECT_INDEX.json`.
+changed. Before restoring, check whether that diff was already present when the run started
+(capture `git stash show -p -- PROJECT_INDEX.json 2>/dev/null` to see the stashed baseline,
+or if nothing was stashed, `git diff HEAD -- PROJECT_INDEX.json`). Only restore the file if
+this run introduced the date-only change; if the `generated` line was already dirty before
+the run touched it, leave the existing change and report it:
+
+```sh
+# restore only when this run introduced the date-only change
+if git diff PROJECT_INDEX.json | grep -qE '^\+.*"generated"' \
+   && [ "$(git diff PROJECT_INDEX.json | grep -cE '^[+-][^+-]')" -eq 2 ]; then
+  git checkout -- PROJECT_INDEX.json
+fi
+```
 
 **3. Access control is real and not self-defeating.** `.gitignore` covers what the build generates;
 `settings.json` denies secrets; `settings.local.json` is gitignored; no `.claudeignore` exists; no

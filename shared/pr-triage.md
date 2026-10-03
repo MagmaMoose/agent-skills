@@ -170,11 +170,16 @@ gh api "repos/$OWNER/$REPO/pulls/$PR/reviews" --paginate \
   -q '.[] | {user: .user.login, state, body}'
 ```
 
-**c) Issue-style conversation comments** (top-level PR comments, many bots post here):
+**c) Issue-style conversation comments** (top-level PR comments, many bots post here).
+Save the raw JSON — (c2) and (d2) both filter this same response:
 
 ```bash
-gh api "repos/$OWNER/$REPO/issues/$PR/comments" --paginate \
-  -q '.[] | {user: .user.login, body}'
+gh api "repos/$OWNER/$REPO/issues/$PR/comments" --paginate > /tmp/issue-comments.json
+cat /tmp/issue-comments.json | python3 -c "
+import sys, json
+for c in json.load(sys.stdin):
+    print(json.dumps({'user': c['user']['login'], 'body': c['body'][:500]}))
+"
 ```
 
 **c2) THE AGENTIC POST-GATE REVIEWS — findings the thread query cannot see.**
@@ -188,12 +193,16 @@ marker of its own:
 | `<!-- agent-skills:brimyr-quality-review -->` | the quality review that runs after Brimyr | beside the Brimyr gate comment, or standalone — Brimyr does not always post one |
 
 Find them by marker and keep the comment **`id`**; you need it to answer in §2b. Their bodies
-are already in (c)'s output, so this lists only what (c) did not print:
+are already in (c)'s saved response — filter that file, no second API call:
 
 ```bash
-gh api "repos/$OWNER/$REPO/issues/$PR/comments" --paginate \
-  -q '.[] | select(.body | test("<!-- agent-skills:(chargate-security-review|brimyr-quality-review) -->"))
-      | {id, review: (.body | capture("<!-- agent-skills:(?<r>[a-z-]+) -->").r), url: .html_url}'
+cat /tmp/issue-comments.json | python3 -c "
+import sys, json, re
+for c in json.load(sys.stdin):
+    m = re.search(r'<!-- agent-skills:([a-z-]+) -->', c['body'])
+    if m and m.group(1) in ('chargate-security-review', 'brimyr-quality-review'):
+        print(json.dumps({'id': c['id'], 'review': m.group(1), 'url': c['html_url']}))
+"
 ```
 
 **THESE ARE NOT REVIEW THREADS, AND (a) WILL NEVER RETURN THEM.** `reviewThreads` returns
