@@ -1,6 +1,6 @@
 # PR review workflow
 
-Before acting, read the target repository's `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, and relevant `README.md` files. Treat explicit hard rules from the target repository as blockers.
+Before acting, read the target repository's `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, and relevant `README.md` files, once each. Skip a file only when its contents are already in your context, as `CLAUDE.md` is when Claude Code loaded it at session start. Treat explicit hard rules from the target repository as blockers.
 
 You are performing a **thorough code review** of a pull request — someone else's or
 your own — and landing it as **one consolidated GitHub review**: inline comments
@@ -126,14 +126,19 @@ locally; if you do, don't leave the user's working tree dirty.)
 A good review reads the change **and its intent**, then checks the change against that
 intent and against the repo's rules. Pull all of it before forming opinions.
 
-**a) The change itself — the diff.** The per-file `patch` is also what tells you which
-lines are inline-commentable (step 4), so prefer the API form:
+**a) The change itself — the diff.** Fetch it once, in the API form: the per-file `patch`
+is also what tells you which lines are inline-commentable (step 4). Read the change and
+anchor every comment from this one output, and don't fetch the diff again, in any form,
+later in the run.
 
 ```bash
-gh pr diff "$PR"                                   # full unified diff, quick read
 gh api "repos/$OWNER/$REPO/pulls/$PR/files" --paginate \
   -q '.[] | {path:.filename, status, additions, deletions, patch}'
 ```
+
+GitHub leaves `patch` out for a binary file and for a diff too large for this API. Such a
+file alone needs the unified diff, and only its own section of it:
+`gh pr diff "$PR" | sed -n '\#^diff --git .* b/<path>$#,\#^diff --git #p'`.
 
 **b) Intent — what the PR claims to do, and what it's linked to:**
 

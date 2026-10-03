@@ -13,8 +13,8 @@ Triage a PR using the shared MagmaMoose PR triage workflow.
 2. `${CLAUDE_PLUGIN_ROOT}/shared/pr-triage.md` — installed as a plugin
 3. `shared/pr-triage.md` — working inside the agent-skills checkout
 
-Then read:
-- The target repository's `CLAUDE.md`
+Then read, once each:
+- The target repository's `CLAUDE.md`, unless Claude Code already loaded it into your context
 - The target repository's `AGENTS.md`
 - The target repository's `CONTRIBUTING.md`
 - Relevant `README.md` files

@@ -1,6 +1,6 @@
 # PR triage workflow
 
-Before acting, read the target repository's `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, and relevant `README.md` files. Treat explicit hard rules from the target repository as blockers.
+Before acting, read the target repository's `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, and relevant `README.md` files, once each. Skip a file only when its contents are already in your context, as `CLAUDE.md` is when Claude Code loaded it at session start. Treat explicit hard rules from the target repository as blockers.
 
 You are triaging and resolving **all actionable review feedback** on a pull request,
 end to end: read every comment, fix the code, commit, reply in-thread, then resolve
@@ -170,11 +170,16 @@ gh api "repos/$OWNER/$REPO/pulls/$PR/reviews" --paginate \
   -q '.[] | {user: .user.login, state, body}'
 ```
 
-**c) Issue-style conversation comments** (top-level PR comments, many bots post here):
+**c) Issue-style conversation comments** (top-level PR comments, many bots post here).
+Save the raw JSON — (c2) and (d2) both filter this same response:
 
 ```bash
-gh api "repos/$OWNER/$REPO/issues/$PR/comments" --paginate \
-  -q '.[] | {user: .user.login, body}'
+gh api "repos/$OWNER/$REPO/issues/$PR/comments" --paginate > /tmp/issue-comments.json
+cat /tmp/issue-comments.json | python3 -c "
+import sys, json
+for c in json.load(sys.stdin):
+    print(json.dumps({'user': c['user']['login'], 'body': c['body'][:500]}))
+"
 ```
 
 **c2) THE AGENTIC POST-GATE REVIEWS — findings the thread query cannot see.**
@@ -187,12 +192,17 @@ marker of its own:
 | `<!-- agent-skills:chargate-security-review -->` | the security review that runs after Chargate | its own comment, opening on and linking to Chargate's `<!-- chargate:pr-summary -->` comment |
 | `<!-- agent-skills:brimyr-quality-review -->` | the quality review that runs after Brimyr | beside the Brimyr gate comment, or standalone — Brimyr does not always post one |
 
-Find them by marker and keep the comment **`id`**; you need it to answer in §2b:
+Find them by marker and keep the comment **`id`**; you need it to answer in §2b. Their bodies
+are already in (c)'s saved response — filter that file, no second API call:
 
 ```bash
-gh api "repos/$OWNER/$REPO/issues/$PR/comments" --paginate \
-  -q '.[] | select(.body | test("<!-- agent-skills:(chargate-security-review|brimyr-quality-review) -->"))
-      | {id, review: (.body | capture("<!-- agent-skills:(?<r>[a-z-]+) -->").r), url: .html_url, body}'
+cat /tmp/issue-comments.json | python3 -c "
+import sys, json, re
+for c in json.load(sys.stdin):
+    m = re.search(r'<!-- agent-skills:([a-z-]+) -->', c['body'])
+    if m and m.group(1) in ('chargate-security-review', 'brimyr-quality-review'):
+        print(json.dumps({'id': c['id'], 'review': m.group(1), 'url': c['html_url']}))
+"
 ```
 
 **THESE ARE NOT REVIEW THREADS, AND (a) WILL NEVER RETURN THEM.** `reviewThreads` returns
@@ -312,8 +322,10 @@ which reads, from the outside, exactly like a job well done.
 ```bash
 gh pr checks <PR>                       # which gates are red
 gh run view <run-id> --log-failed | grep -E 'BLOCKING|net-new'
-gh pr view <PR> --json comments -q '.comments[].body' | grep -A200 'chargate:pr-summary'
 ```
+
+The gate's summary comment (`<!-- chargate:pr-summary -->`) is an issue comment, so (c) has
+already printed it in full: read it there rather than fetching the comments again.
 
 Reconcile the two: every finding in the summary must end up fixed or suppressed, whether
 or not it ever had a thread. See §2a for how, and for why the usual suppression attempts
@@ -368,13 +380,13 @@ the threads are a SUBSET. Triaging only what has a thread leaves the gate red wh
 every thread reads as resolved. In order of preference:
 
 ```bash
-# 1. The scanner's own summary comment — the complete net-new list
-gh pr view <PR> --json comments -q '.comments[].body' | grep -A200 'chargate:pr-summary'
+# 1. The scanner's own summary comment, the complete net-new list: already printed by §1 (c)
 # 2. The full SARIF, uploaded as a run artifact
 gh run download <run-id> -n chargate-sarif && jq -r '.runs[].results[] | .ruleId + ": " + .message.text' full.sarif
-# 3. The job log — the gate line says exactly what is blocking
-gh run view <run-id> --log-failed | grep -E 'BLOCKING|net-new'
+# 3. The job log, whose gate line says exactly what is blocking: already pulled in §1 (d2)
 ```
+
+Use what §1 already fetched for 1 and 3; don't run those again.
 
 **Know what the gate counts.** Chargate blocks on **net-new** only:
 `BLOCKING 44 net-new finding(s) (fail_on=any)` alongside `1982 pre-existing, never

@@ -36,7 +36,7 @@ This repo has no build step. Scripts are run directly.
 - Architectural decision: write it to .claude/decisions/.
 - Public behaviour, API, config or setup changed: sync README.md (this repo uses README, not ./docs).
 - New workflow added: create all three files (shared/, commands/, skills/) and update README.md workflow table and plugin versions in both .claude-plugin/plugin.json and .codex-plugin/plugin.json.
-- PROJECT_INDEX.json stale after a new module or a big refactor: regenerate the affected modules section only, and update "generated".
+- PROJECT_INDEX.json stale after a new module or a big refactor: regenerate the affected modules section only, and update "generated" in that same edit. Never change "generated" on its own.
 - Keep CLAUDE.md under ~500 tokens. Push detail into on-demand .claude/ files.
 
 This file is canonical. AGENTS.md points here.

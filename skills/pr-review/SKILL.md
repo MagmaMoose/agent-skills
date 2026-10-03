@@ -5,10 +5,10 @@ description: Review a GitHub PR end to end for correctness, security, repository
 
 Use the shared MagmaMoose PR review workflow.
 
-Read and follow:
+Read and follow, once each:
 - `shared/pr-review.md`
 - The target repository's `CLAUDE.md`
-- The target repository's `AGENTS.md`
+- The target repository's `AGENTS.md`, unless Codex already loaded it into your context
 - The target repository's `CONTRIBUTING.md`
 - Relevant `README.md` files
 

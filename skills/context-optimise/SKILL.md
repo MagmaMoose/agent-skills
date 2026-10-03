@@ -54,7 +54,7 @@ it exists to avoid.
 2. **Layer 1, the structural map** — `PROJECT_INDEX.json` at the root: summary, entrypoints,
    meaningful modules with purpose and internal dependencies, a few callgraph highlights, and
    hotspots derived from `git log` rather than instinct. Under ~300 lines. Every path in it must
-   resolve.
+   resolve. `generated` changes only in an edit that changes something else in the file.
 3. **Layer 2, the session context** — the on-demand files (`ARCHITECTURE_MAP.md`,
    `COMMON_MISTAKES.md`, `QUICK_START.md`, `decisions/`, `sessions/`) and a root `CLAUDE.md` under
    ~500 tokens that imports only the first two. Seed `COMMON_MISTAKES.md` from real evidence (fix
@@ -85,7 +85,9 @@ it exists to avoid.
 - Never write a secret, token, internal hostname or production URL into a file you create.
 - Never add a dependency to the target repository to make a layer work. Report the install command.
 - Never introduce a second docs system alongside one that already exists.
-- Idempotent: a second run merges, it does not duplicate or clobber.
+- Idempotent: a second run merges, it does not duplicate or clobber. On a repo whose stack is
+  already accurate it changes nothing, not even `generated`.
 - Write the changes, then show them. Don't stop mid-run to ask permission.
-- Never commit, push, or open a PR unless explicitly asked. The run ends with a dirty working tree
-  and a report.
+- Never commit, push, or open a PR unless explicitly asked, and never for a run that changed
+  nothing. The run ends with its edits in the working tree and a report, or a clean tree when
+  nothing needed changing.
