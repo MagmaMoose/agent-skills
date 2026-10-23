@@ -177,14 +177,19 @@ PRs opened during the sweep are processed too.
 If a planner agent files those issues from written notes or directives (a list of known gaps,
 a roadmap file), a stale note re-files work that already shipped. When you close an issue or PR
 as a duplicate of something merged, update the note it came from too: mark what is fixed and
-what is in flight, with the PR numbers, dated.
+what is in flight, with the PR numbers, dated. A planner reading the code can also miss a test or
+fix that merged hours earlier. Before you merge an issue-lane PR, check that main does not
+already have it.
 
 Other automation can also change PRs under you. Auto-merge can be switched off by another
 session or a merge gate running as the same account, and a governance bot can commit straight to
 default branches mid-sweep. Re-check auto-merge and branch state in the final pass. Before you
 re-arm auto-merge, read the PR timeline for why it was turned off: a merge gate that pushed its
 own fix to a branch may turn auto-merge off on purpose, so the new head is reviewed and the gate
-merges it itself. Leave that to the gate rather than routing around its review.
+merges it itself. Leave that to the gate rather than routing around its review. But check the
+reason it gives: a triage bot can claim a check is required when it is not. Compare it with the
+ruleset (`gh api repos/ORG/REPO/rules/branches/main`), and where the reason is wrong, reply on
+the PR with the correction and re-arm auto-merge.
 
 ## 5. Merging and CI capacity
 
@@ -212,6 +217,9 @@ merges it itself. Leave that to the gate rather than routing around its review.
   ref with `cancel-in-progress: false`, the new head's run waits until the old head's run ends,
   and that old run still holds a runner. After pushing to a PR, cancel the old head's runs
   (`gh run list --branch B`, then `gh run cancel RUN`).
+- A cancelled required check never runs again by itself. When a queue backs up, people and
+  automation cancel runs that have waited for hours, and auto-merge then waits for ever. In the
+  final pass, look for required checks that ended `cancelled` and re-run them.
 - Do not poll CI in a tight loop. One look at a PR's state per pass is enough.
 
 ## 6. Verify and report
