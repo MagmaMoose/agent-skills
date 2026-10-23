@@ -169,6 +169,15 @@ wrong, close or update its linked issue with the same reason. Consolidate duplic
 one tracking issue, and close issues the sweep has resolved. Re-run the inventory at the end, so
 PRs opened during the sweep are processed too.
 
+If a planner agent files those issues from written notes or directives (a list of known gaps,
+a roadmap file), a stale note re-files work that already shipped. When you close an issue or PR
+as a duplicate of something merged, update the note it came from too: mark what is fixed and
+what is in flight, with the PR numbers, dated.
+
+Other automation can also change PRs under you. Auto-merge can be switched off by another
+session or a merge gate running as the same account, and a governance bot can commit straight to
+default branches mid-sweep. Re-check auto-merge and branch state in the final pass.
+
 ## 5. Merging and CI capacity
 
 - When a PR is ready, `gh pr merge N --repo R --squash --auto` lets GitHub merge it once the
