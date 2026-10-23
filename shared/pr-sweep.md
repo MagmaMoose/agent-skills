@@ -85,6 +85,12 @@ once is almost never many separate problems. Sample one log per distinct failing
   main, or record that it is pre-existing and not required.
 - **A shared CI gate or reusable workflow** with a bug. Fix it in its own repository and release
   it the way that repository releases, without breaking its other consumers.
+- **A provisioning bot reverting a fix.** If a file keeps changing back in commits by a settings
+  or file-provisioning bot, often minutes after any merge to its config repository, the bot's
+  template is the source. Fix the template; a fix in the repository lasts until the next run.
+- **A gate measuring a broken run.** A coverage figure that suddenly drops can come from tests
+  that skipped (a database service missing from the workflow), not from untested code. Read the
+  skipped count in the log before believing the number.
 
 Fix each shared cause once, in its own small PR, before the per-PR pass. Otherwise every PR you
 touch goes red for the same reason.
@@ -106,6 +112,13 @@ them to the most careful agent.
   change is reasonable and testable. Otherwise close it with the reason and
   `@dependabot ignore this major version`, so it does not come back next week.
 - Fails for a reason that is not the bump: that is a shared cause (section 2).
+- Many bumps queued behind scarce CI: combine the compatible ones for one ecosystem and directory
+  into a single PR, verify it, and close the originals pointing at it.
+- After a rebase, Dependabot may close a PR as "updatable in another way" and open a
+  replacement. Follow the replacement.
+- **Merged is not patched.** Check that the security alerts close. A bump to one lock file can
+  leave a sibling lock compiled from the same requirements (a separate runtime or function
+  package) on the vulnerable version.
 
 ### Human- and agent-authored PRs
 
@@ -225,12 +238,21 @@ the PR with the correction and re-arm auto-merge.
 - A cancelled required check never runs again by itself. When a queue backs up, people and
   automation cancel runs that have waited for hours, and auto-merge then waits for ever. In the
   final pass, look for required checks that ended `cancelled` and re-run them.
+- If automation arms auto-merge on new PRs, keep your own PR a draft until its non-required
+  checks pass, then mark it ready and merge.
 - Do not poll CI in a tight loop. One look at a PR's state per pass is enough.
 
 ## 6. Verify and report
 
-Re-run the inventory. Every PR still open needs a stated reason and the exact owner action. Then
-report:
+Re-run the inventory. Every PR still open needs a stated reason and the exact owner action.
+
+Then list the open security alerts per repository
+(`gh api repos/ORG/REPO/dependabot/alerts?state=open`). An alert with no PR means nothing is
+proposing updates for that ecosystem: it is missing from the Dependabot config, or the bot meant
+to cover it is not running. Patch it, and report the gap. Some alerts lag a merge by a scan, so
+compare each one with the lock file on the default branch before acting on it.
+
+Then report:
 
 - one row per PR: `repo#number | merged / closed / open | what was fixed, or why`;
 - shared causes fixed, and where (with links);
