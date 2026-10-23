@@ -148,6 +148,11 @@ apply on push, release workflows publish. Then:
   values) and inspect the result, not just whether it builds. A patch that targets nothing fails
   silently. Verify every alert expression against the live Prometheus: the metric must exist.
   After the merge, confirm the controller applied the new revision and the workload is healthy.
+  Rendering cannot catch runtime failures: a volume mounted at a path that is a file in the image
+  (a minimal image's binary often lives at `/<name>`) renders fine and then fails to start. For a
+  new container, check the image's layout or start it once in a throwaway pod first. Watch every
+  rollout you cause; a `Recreate` Deployment is down the moment its new pod cannot start. If that
+  happens, suspend the controller for that app, fix it live, and land the same fix in Git.
 - **Terraform:** read the plan for the exact commit you will merge. Adopt existing objects with
   declarative `import {}` blocks, so the reviewed plan shows the import and the gated apply
   performs it, instead of a manual `terraform import` someone must remember first. Merge only
@@ -168,6 +173,18 @@ appearing minutes after you close the first). For every PR you close as obsolete
 wrong, close or update its linked issue with the same reason. Consolidate duplicate issues into
 one tracking issue, and close issues the sweep has resolved. Re-run the inventory at the end, so
 PRs opened during the sweep are processed too.
+
+If a planner agent files those issues from written notes or directives (a list of known gaps,
+a roadmap file), a stale note re-files work that already shipped. When you close an issue or PR
+as a duplicate of something merged, update the note it came from too: mark what is fixed and
+what is in flight, with the PR numbers, dated.
+
+Other automation can also change PRs under you. Auto-merge can be switched off by another
+session or a merge gate running as the same account, and a governance bot can commit straight to
+default branches mid-sweep. Re-check auto-merge and branch state in the final pass. Before you
+re-arm auto-merge, read the PR timeline for why it was turned off: a merge gate that pushed its
+own fix to a branch may turn auto-merge off on purpose, so the new head is reviewed and the gate
+merges it itself. Leave that to the gate rather than routing around its review.
 
 ## 5. Merging and CI capacity
 
@@ -191,6 +208,10 @@ PRs opened during the sweep are processed too.
 - Many PRs means many CI runs, and runner capacity becomes the bottleneck. Watch the pool as you
   go. A job that failed with no log needs the runner fixed, not a blind re-run; re-run with
   `gh run rerun RUN --failed` once it is fixed.
+- A new push can queue behind its own stale run. Where a workflow has a `concurrency` group per
+  ref with `cancel-in-progress: false`, the new head's run waits until the old head's run ends,
+  and that old run still holds a runner. After pushing to a PR, cancel the old head's runs
+  (`gh run list --branch B`, then `gh run cancel RUN`).
 - Do not poll CI in a tight loop. One look at a PR's state per pass is enough.
 
 ## 6. Verify and report
