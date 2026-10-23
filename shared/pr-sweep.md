@@ -201,9 +201,11 @@ the PR with the correction and re-arm auto-merge.
   mergeable: merge it directly. Auto-merge can drop off silently; re-check every PR you set it on
   during the final pass.
 - **Auto-merge waits only for REQUIRED checks.** A failing check that is not required (a version
-  bump guard, a test job) does not stop it, so a PR can merge red. Before enabling auto-merge,
-  look at every check the repository runs, not just the required ones; where a meaningful check
-  is not required, wait for it and merge by hand, and tell the owner it should be required.
+  bump guard, a test job) does not stop it, so a PR can merge red. In a repository with no
+  required checks at all, `--auto` merges at once, before any check has started. Before
+  enabling auto-merge, look at every check the repository runs, not just the required ones;
+  where a meaningful check is not required, wait for it and merge by hand, and tell the owner
+  it should be required.
 - **A merged change is not a shipped one.** Where publishing is per artifact version (charts in a
   monorepo, packages), a change ships only with a version bump, and a publish step that skips
   existing versions skips it silently. After the merge, check the registry for the new version
