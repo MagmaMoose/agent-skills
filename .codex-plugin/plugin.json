@@ -1,7 +1,7 @@
 {
   "name": "agent-skills",
-  "version": "1.10.0",
-  "description": "Shared PR review, PR triage, post-gate security review, post-gate quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stack, codebase prune, architecture diagrams, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, context optimisation, launch-video brand profiling, and welcome-back report workflows for MagmaMoose agents.",
+  "version": "1.11.0",
+  "description": "Shared PR review, PR triage, org-wide PR sweep, post-gate security review, post-gate quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stack, codebase prune, architecture diagrams, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, context optimisation, launch-video brand profiling, and welcome-back report workflows for MagmaMoose agents.",
   "author": {
     "name": "Caleb Sargeant",
     "email": "caleb@magmamoose.com",
@@ -13,6 +13,8 @@
   "keywords": [
     "pr-review",
     "pr-triage",
+    "dependabot",
+    "pr-sweep",
     "code-review",
     "documentation",
     "mkdocs",
