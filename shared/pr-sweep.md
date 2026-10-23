@@ -85,6 +85,12 @@ once is almost never many separate problems. Sample one log per distinct failing
   main, or record that it is pre-existing and not required.
 - **A shared CI gate or reusable workflow** with a bug. Fix it in its own repository and release
   it the way that repository releases, without breaking its other consumers.
+- **A provisioning bot reverting a fix.** If a file keeps changing back in commits by a settings
+  or file-provisioning bot, often minutes after any merge to its config repository, the bot's
+  template is the source. Fix the template; a fix in the repository lasts until the next run.
+- **A gate measuring a broken run.** A coverage figure that suddenly drops can come from tests
+  that skipped (a database service missing from the workflow), not from untested code. Read the
+  skipped count in the log before believing the number.
 
 Fix each shared cause once, in its own small PR, before the per-PR pass. Otherwise every PR you
 touch goes red for the same reason.
@@ -106,6 +112,13 @@ them to the most careful agent.
   change is reasonable and testable. Otherwise close it with the reason and
   `@dependabot ignore this major version`, so it does not come back next week.
 - Fails for a reason that is not the bump: that is a shared cause (section 2).
+- Many bumps queued behind scarce CI: combine the compatible ones for one ecosystem and directory
+  into a single PR, verify it, and close the originals pointing at it.
+- After a rebase, Dependabot may close a PR as "updatable in another way" and open a
+  replacement. Follow the replacement.
+- **Merged is not patched.** Check that the security alerts close. A bump to one lock file can
+  leave a sibling lock compiled from the same requirements (a separate runtime or function
+  package) on the vulnerable version.
 
 ### Human- and agent-authored PRs
 
@@ -148,6 +161,14 @@ apply on push, release workflows publish. Then:
   values) and inspect the result, not just whether it builds. A patch that targets nothing fails
   silently. Verify every alert expression against the live Prometheus: the metric must exist.
   After the merge, confirm the controller applied the new revision and the workload is healthy.
+  Rendering cannot catch runtime failures: a volume mounted at a path that is a file in the image
+  (a minimal image's binary often lives at `/<name>`) renders fine and then fails to start. For a
+  new container, check the image's layout or start it once in a throwaway pod first. Watch every
+  rollout you cause; a `Recreate` Deployment is down the moment its new pod cannot start. If that
+  happens, suspend the controller for that app, fix it live, and land the same fix in Git.
+  A capacity fix (a pool size, a limit) needs a second look after an hour of real load: one
+  sized from a single measurement can still overflow at peak and evict other workloads on the
+  same node. Check the node's pressure conditions and the firing alerts, not only your pods.
 - **Terraform:** read the plan for the exact commit you will merge. Adopt existing objects with
   declarative `import {}` blocks, so the reviewed plan shows the import and the gated apply
   performs it, instead of a manual `terraform import` someone must remember first. Merge only
@@ -169,6 +190,23 @@ wrong, close or update its linked issue with the same reason. Consolidate duplic
 one tracking issue, and close issues the sweep has resolved. Re-run the inventory at the end, so
 PRs opened during the sweep are processed too.
 
+If a planner agent files those issues from written notes or directives (a list of known gaps,
+a roadmap file), a stale note re-files work that already shipped. When you close an issue or PR
+as a duplicate of something merged, update the note it came from too: mark what is fixed and
+what is in flight, with the PR numbers, dated. A planner reading the code can also miss a test or
+fix that merged hours earlier. Before you merge an issue-lane PR, check that main does not
+already have it.
+
+Other automation can also change PRs under you. Auto-merge can be switched off by another
+session or a merge gate running as the same account, and a governance bot can commit straight to
+default branches mid-sweep. Re-check auto-merge and branch state in the final pass. Before you
+re-arm auto-merge, read the PR timeline for why it was turned off: a merge gate that pushed its
+own fix to a branch may turn auto-merge off on purpose, so the new head is reviewed and the gate
+merges it itself. Leave that to the gate rather than routing around its review. But check the
+reason it gives: a triage bot can claim a check is required when it is not. Compare it with the
+ruleset (`gh api repos/ORG/REPO/rules/branches/main`), and where the reason is wrong, reply on
+the PR with the correction and re-arm auto-merge.
+
 ## 5. Merging and CI capacity
 
 - When a PR is ready, `gh pr merge N --repo R --squash --auto` lets GitHub merge it once the
@@ -176,9 +214,11 @@ PRs opened during the sweep are processed too.
   mergeable: merge it directly. Auto-merge can drop off silently; re-check every PR you set it on
   during the final pass.
 - **Auto-merge waits only for REQUIRED checks.** A failing check that is not required (a version
-  bump guard, a test job) does not stop it, so a PR can merge red. Before enabling auto-merge,
-  look at every check the repository runs, not just the required ones; where a meaningful check
-  is not required, wait for it and merge by hand, and tell the owner it should be required.
+  bump guard, a test job) does not stop it, so a PR can merge red. In a repository with no
+  required checks at all, `--auto` merges at once, before any check has started. Before
+  enabling auto-merge, look at every check the repository runs, not just the required ones;
+  where a meaningful check is not required, wait for it and merge by hand, and tell the owner
+  it should be required.
 - **A merged change is not a shipped one.** Where publishing is per artifact version (charts in a
   monorepo, packages), a change ships only with a version bump, and a publish step that skips
   existing versions skips it silently. After the merge, check the registry for the new version
@@ -191,12 +231,28 @@ PRs opened during the sweep are processed too.
 - Many PRs means many CI runs, and runner capacity becomes the bottleneck. Watch the pool as you
   go. A job that failed with no log needs the runner fixed, not a blind re-run; re-run with
   `gh run rerun RUN --failed` once it is fixed.
+- A new push can queue behind its own stale run. Where a workflow has a `concurrency` group per
+  ref with `cancel-in-progress: false`, the new head's run waits until the old head's run ends,
+  and that old run still holds a runner. After pushing to a PR, cancel the old head's runs
+  (`gh run list --branch B`, then `gh run cancel RUN`).
+- A cancelled required check never runs again by itself. When a queue backs up, people and
+  automation cancel runs that have waited for hours, and auto-merge then waits for ever. In the
+  final pass, look for required checks that ended `cancelled` and re-run them.
+- If automation arms auto-merge on new PRs, keep your own PR a draft until its non-required
+  checks pass, then mark it ready and merge.
 - Do not poll CI in a tight loop. One look at a PR's state per pass is enough.
 
 ## 6. Verify and report
 
-Re-run the inventory. Every PR still open needs a stated reason and the exact owner action. Then
-report:
+Re-run the inventory. Every PR still open needs a stated reason and the exact owner action.
+
+Then list the open security alerts per repository
+(`gh api repos/ORG/REPO/dependabot/alerts?state=open`). An alert with no PR means nothing is
+proposing updates for that ecosystem: it is missing from the Dependabot config, or the bot meant
+to cover it is not running. Patch it, and report the gap. Some alerts lag a merge by a scan, so
+compare each one with the lock file on the default branch before acting on it.
+
+Then report:
 
 - one row per PR: `repo#number | merged / closed / open | what was fixed, or why`;
 - shared causes fixed, and where (with links);
