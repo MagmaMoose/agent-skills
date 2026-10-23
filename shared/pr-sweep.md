@@ -175,6 +175,14 @@ PRs opened during the sweep are processed too.
   required checks pass. If GitHub answers that the PR "is in clean status", it is already
   mergeable: merge it directly. Auto-merge can drop off silently; re-check every PR you set it on
   during the final pass.
+- **Auto-merge waits only for REQUIRED checks.** A failing check that is not required (a version
+  bump guard, a test job) does not stop it, so a PR can merge red. Before enabling auto-merge,
+  look at every check the repository runs, not just the required ones; where a meaningful check
+  is not required, wait for it and merge by hand, and tell the owner it should be required.
+- **A merged change is not a shipped one.** Where publishing is per artifact version (charts in a
+  monorepo, packages), a change ships only with a version bump, and a publish step that skips
+  existing versions skips it silently. After the merge, check the registry for the new version
+  and that the consumer picked it up.
 - Use `gh api -X PUT repos/ORG/REPO/pulls/N/update-branch` to bring a PR up to date without a
   local rebase, when it has no conflicts.
 - Resolve review threads with GraphQL `addPullRequestReviewThreadReply` followed by
