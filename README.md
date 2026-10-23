@@ -14,6 +14,7 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | --- | --- | --- |
 | PR review | `/claude-skills:pr-review` | `pr-review` |
 | PR triage | `/claude-skills:pr-triage` | `pr-triage` |
+| PR sweep | `/claude-skills:pr-sweep` | `pr-sweep` |
 | Chargate security review | `/claude-skills:chargate-security-review` | `chargate-security-review` |
 | Brimyr quality review | `/claude-skills:brimyr-quality-review` | `brimyr-quality-review` |
 | Docs sync | `/claude-skills:docs-update` | `docs-update` |
@@ -28,6 +29,15 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | MikroTik RouterOS | `/claude-skills:mikrotik-routeros` | `mikrotik-routeros` |
 | Architecture diagram | `/claude-skills:diagram-draw` | `diagram-draw` |
 | Welcome-back report | `/claude-skills:catchup-write` | `catchup-write` |
+
+`pr-sweep` clears every open pull request in a GitHub organisation, so none is left to worry
+about: each ends merged, or closed with a reason, or open with the exact thing only the owner
+can do. It inventories them in one query and fixes the causes many PRs share before touching any
+single one (a runner pool that claims jobs it cannot run, a gate Dependabot runs cannot pass), then
+works each PR: rebases and triages the keepers, closes duplicates, and checks an agent-written PR's
+premise against reality before merging it, because a green PR can still fix something that is not
+there. PRs that apply infrastructure on merge are merged only after their plan has been read, and
+the issues that would make an issue-to-PR agent re-open a closed PR are settled too.
 
 `chargate-security-review` runs once the Chargate gate has finished and reviews the same diff Chargate
 just scanned — for the things a scanner structurally cannot find. Chargate matches patterns; this reads the
