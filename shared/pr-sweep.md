@@ -81,6 +81,11 @@ once is almost never many separate problems. Sample one log per distinct failing
   secrets, not Actions secrets, so a step that needs a secret (a preview deploy, an upload)
   fails on every Dependabot PR. Fix it once on the default branch: skip or degrade that step for
   Dependabot, rather than failing it.
+- **An upstream platform dropped support.** A package manager ending support for an OS version
+  (no more prebuilt binaries, so dependencies build from source and fail), or a retired runner
+  image, turns a required matrix leg red on every PR from one day to the next. Ask the tool
+  itself whether the platform is still supported, skip that leg with a notice when it is not,
+  and tell the owner to drop the leg and its required check.
 - **A check that is red on the default branch itself.** Then every PR inherits it. Fix it on
   main, or record that it is pre-existing and not required.
 - **A shared CI gate or reusable workflow** with a bug. Fix it in its own repository and release
@@ -230,7 +235,10 @@ the PR with the correction and re-arm auto-merge.
   out wrong (`updatePullRequestReviewComment`) rather than leaving it.
 - Many PRs means many CI runs, and runner capacity becomes the bottleneck. Watch the pool as you
   go. A job that failed with no log needs the runner fixed, not a blind re-run; re-run with
-  `gh run rerun RUN --failed` once it is fixed.
+  `gh run rerun RUN --failed` once it is fixed. A re-run reuses the commit and the workflow file
+  it first ran with, so after fixing CI on the default branch, update the PR's branch
+  (`update-branch` above) to get a run with the fix. Then wait for the new checks to start
+  before reading them, or you read the old results.
 - A new push can queue behind its own stale run. Where a workflow has a `concurrency` group per
   ref with `cancel-in-progress: false`, the new head's run waits until the old head's run ends,
   and that old run still holds a runner. After pushing to a PR, cancel the old head's runs
