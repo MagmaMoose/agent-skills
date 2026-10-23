@@ -70,6 +70,13 @@ once is almost never many separate problems. Sample one log per distinct failing
   the runner pods and their node: init containers OOMKilled, `DiskPressure`, evictions. A
   self-hosted pool that accepts jobs it cannot run holds them hostage, and other repositories'
   CI stalls behind it.
+- **The org's hosted-runner minutes.** A GitHub-hosted job in a private repository that fails in
+  about two seconds with no runner, and the annotation "The job was not started because recent
+  account payments have failed or your spending limit needs to be increased", is billing. Only
+  the owner can fix it. Read the annotation (`gh api repos/ORG/REPO/check-runs/JOB/annotations`),
+  do not re-run or rewrite workflows around it, and report every PR whose required check it
+  blocks. Self-hosted jobs and public repositories are unaffected, so a sweep can look half
+  healthy while this is happening.
 - **A gate that cannot run in this context.** Dependabot-triggered runs only see Dependabot
   secrets, not Actions secrets, so a step that needs a secret (a preview deploy, an upload)
   fails on every Dependabot PR. Fix it once on the default branch: skip or degrade that step for
