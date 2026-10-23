@@ -153,6 +153,9 @@ apply on push, release workflows publish. Then:
   new container, check the image's layout or start it once in a throwaway pod first. Watch every
   rollout you cause; a `Recreate` Deployment is down the moment its new pod cannot start. If that
   happens, suspend the controller for that app, fix it live, and land the same fix in Git.
+  A capacity fix (a pool size, a limit) needs a second look after an hour of real load: one
+  sized from a single measurement can still overflow at peak and evict other workloads on the
+  same node. Check the node's pressure conditions and the firing alerts, not only your pods.
 - **Terraform:** read the plan for the exact commit you will merge. Adopt existing objects with
   declarative `import {}` blocks, so the reviewed plan shows the import and the gated apply
   performs it, instead of a manual `terraform import` someone must remember first. Merge only
