@@ -2,7 +2,7 @@
 
 Shared agent workflows for the MagmaMoose stack, packaged for Claude Code and Codex.
 
-This repository keeps one source of truth for PR review, PR triage, post-gate security and quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stacks, codebase prune, architecture diagrams, tvOS SwiftUI, and context optimisation, and welcome-back report work. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
+This repository keeps one source of truth for PR review, PR triage, PR and issue sweeps, post-gate security and quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stacks, codebase prune, architecture diagrams, tvOS SwiftUI, and context optimisation, and welcome-back report work. Claude Code uses the `.claude-plugin` marketplace plus `commands/`, Codex uses the `.codex-plugin` manifest plus `skills/`, and the actual workflow logic lives in `shared/`.
 
 Do not fork these workflows per project. Put project-specific rules in the target repository's `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, or relevant `README.md` files. The adapters instruct agents to read those files before acting and to treat explicit hard rules as blockers.
 
@@ -15,6 +15,7 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | PR review | `/claude-skills:pr-review` | `pr-review` |
 | PR triage | `/claude-skills:pr-triage` | `pr-triage` |
 | PR sweep | `/claude-skills:pr-sweep` | `pr-sweep` |
+| Issue sweep | `/claude-skills:issue-sweep` | `issue-sweep` |
 | Chargate security review | `/claude-skills:chargate-security-review` | `chargate-security-review` |
 | Brimyr quality review | `/claude-skills:brimyr-quality-review` | `brimyr-quality-review` |
 | Docs sync | `/claude-skills:docs-update` | `docs-update` |
@@ -38,6 +39,16 @@ works each PR: rebases and triages the keepers, closes duplicates, and checks an
 premise against reality before merging it, because a green PR can still fix something that is not
 there. PRs that apply infrastructure on merge are merged only after their plan has been read, and
 the issues that would make an issue-to-PR agent re-open a closed PR are settled too.
+
+`issue-sweep` does the same for issues: by default the ones assigned to you, across every
+repository on the host. Each ends closed with a reason (done, superseded, not planned, or moved
+to the team that owns it) or open with a dated state comment and the board column that matches
+it. It decides from the default branch and the live system rather than the column a card sits in,
+because boards drift: a "To Do" card can be shipped work and an "In progress" card can be a PR
+that merged last week. It sorts issues before verifying them (PR-tracking issues, agent-stuck
+issues, work streams, audits, old backlog, requests someone is waiting on), looks for the one
+cause behind many stuck issues, and can fan the read-only verification out to agents while
+posting every comment itself, so the voice stays the owner's.
 
 `chargate-security-review` runs once the Chargate gate has finished and reviews the same diff Chargate
 just scanned — for the things a scanner structurally cannot find. Chargate matches patterns; this reads the
