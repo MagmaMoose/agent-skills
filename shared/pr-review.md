@@ -110,7 +110,7 @@ VIEWER=$(gh api user -q .login)
 # own PR  ⇔  "$VIEWER" == "$AUTHOR"   → verdict is forced to COMMENT later
 ```
 
-This repo may live on **github.com** or **pinkroccade.ghe.com**; `gh` auto-selects the
+This repo may live on **github.com** or a GitHub Enterprise host; `gh` auto-selects the
 right host from the remote, so the commands below work as-is.
 
 You do **not** need to check out the branch — review reads the diff and the tree through
