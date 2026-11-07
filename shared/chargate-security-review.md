@@ -69,7 +69,7 @@ gh repo view --json owner,name -q '.owner.login + " " + .name'
 ```
 
 Capture `OWNER`, `REPO`, `PR`, `HEAD` (head branch), `HEAD_SHA` (`headRefOid`), `BASE`, and
-`AUTHOR`. The repo may live on **github.com** or **pinkroccade.ghe.com**; `gh` picks the host
+`AUTHOR`. The repo may live on **github.com** or a GitHub Enterprise host; `gh` picks the host
 from the remote, so every command below works as-is.
 
 You do not need to check out the branch to review, but you **do** need the files. Fetch the

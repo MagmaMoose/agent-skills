@@ -119,7 +119,7 @@ gh repo view --json owner,name -q '.owner.login + " " + .name'
 
 Capture `OWNER`, `REPO`, `PR`, `HEAD` (head branch), `HEAD_SHA` (`headRefOid` — every finding you
 report is pinned to this commit), `BASE`, and `AUTHOR`. This repo may live on **github.com** or
-**pinkroccade.ghe.com**; `gh` picks the host from the remote, so the commands below work as-is.
+a GitHub Enterprise host; `gh` picks the host from the remote, so the commands below work as-is.
 
 You do **not** need a working tree to review — no `gh pr checkout`, no branch switch — except for
 the executed mutation probe (§1, tier 2) and the local coverage fallback (§3c). But you **do** need

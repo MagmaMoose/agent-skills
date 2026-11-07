@@ -50,7 +50,7 @@ Get owner/repo robustly:
 gh repo view --json owner,name -q '.owner.login + " " + .name'
 ```
 
-Note the host: this repo may live on **github.com** or **pinkroccade.ghe.com**.
+Note the host: this repo may live on **github.com** or a GitHub Enterprise host.
 `gh` auto-selects the right host from the remote, so the commands below work as-is.
 
 **Check out the PR head branch** before touching code (skip if you're already on it):
