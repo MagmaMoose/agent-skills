@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-27",
+  "generated": "2026-11-09",
   "summary": "Shared agent workflows for Claude Code and Codex, covering PR review, PR triage, PR and issue sweeps, post-gate security and quality review, documentation sync, docs anonymisation, Kubernetes platform audit, Kubernetes observability stack, codebase prune, architecture diagrams, MikroTik RouterOS reference, tvOS SwiftUI, macOS SwiftUI, and context optimisation. Canonical logic lives in shared/; commands/ and skills/ are thin adapters for their respective platforms. Scripts provide standalone harvesters and payload builders used by the heavier workflows.",
   "entrypoints": [
     "commands/pr-review.md: Claude Code slash commands \u2014 each file in commands/ is /claude-skills:{stem}",
@@ -16,7 +16,7 @@
       "exports": [
         "pr-review.md",
         "pr-triage.md",
-        "pr-sweep.md",
+        "pr-purge.md",
         "issue-sweep.md",
         "chargate-security-review.md",
         "brimyr-quality-review.md",
@@ -44,11 +44,11 @@
     },
     "commands": {
       "path": "commands/",
-      "purpose": "Claude Code slash command adapters (namespace: claude-skills). Each file delegates to shared/. Two deprecated aliases forward to renamed workflows.",
+      "purpose": "Claude Code slash command adapters (namespace: claude-skills). Each file delegates to shared/. Three deprecated aliases forward to renamed workflows.",
       "exports": [
         "pr-review.md",
         "pr-triage.md",
-        "pr-sweep.md",
+        "pr-purge.md",
         "issue-sweep.md",
         "chargate-security-review.md",
         "brimyr-quality-review.md",
@@ -63,6 +63,7 @@
         "swiftui-build.md",
         "macos-swiftui.md",
         "mikrotik-routeros.md",
+        "pr-sweep.md (deprecated -> pr-purge)",
         "tvos-swiftui.md (deprecated -> swiftui-build)",
         "update-docs.md (deprecated -> docs-update)",
         "catchup-write.md"
@@ -77,7 +78,7 @@
       "exports": [
         "pr-review",
         "pr-triage",
-        "pr-sweep",
+        "pr-purge",
         "issue-sweep",
         "chargate-security-review",
         "brimyr-quality-review",
@@ -92,6 +93,7 @@
         "swiftui-build",
         "macos-swiftui",
         "mikrotik-routeros",
+        "pr-sweep (deprecated -> pr-purge)",
         "tvos-swiftui (deprecated -> swiftui-build)",
         "update-docs (deprecated -> docs-update)",
         "catchup-write"

@@ -7,7 +7,7 @@ Use the shared MagmaMoose issue sweep workflow.
 
 Read and follow, once each:
 - `shared/issue-sweep.md`
-- `shared/pr-sweep.md`, for reading the state of the pull requests an issue depends on
+- `shared/pr-purge.md`, for reading the state of the pull requests an issue depends on
 - Each target repository's `CLAUDE.md`, `AGENTS.md` (unless Codex already loaded it into your
   context), `CONTRIBUTING.md` and mistakes log, before changing anything in it
 

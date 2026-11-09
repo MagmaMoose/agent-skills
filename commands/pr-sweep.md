@@ -1,31 +1,24 @@
 ---
-description: Clear every open pull request in a GitHub org - inventory them, fix the shared causes first, then merge, close or finish each one, settle the issues that keep re-creating PRs, and report what only the owner can do
+description: Deprecated alias for /claude-skills:pr-purge. Runs the same PR purge workflow under the old name
 argument-hint: "[org name] [repo filter] [dry-run]"
 allowed-tools: Bash(gh:*), Bash(git:*), Bash(jq:*), Bash(yq:*), Bash(kubectl:*), Bash(kustomize:*), Bash(helm:*), Bash(terraform:*), Bash(tofu:*), Bash(terragrunt:*), Bash, Read, Edit, Write, Grep, Glob, Agent
 ---
 
-Sweep a GitHub organisation's open pull requests using the shared MagmaMoose PR sweep workflow.
+`/claude-skills:pr-sweep` has been renamed to `/claude-skills:pr-purge`. This alias exists so
+existing headless installs and scripts keep working, and it will be removed in a future release.
 
-**First, read the full rubric.** It lives at the first of these paths that exists
-(check in order):
+Say once, before you start, that the command is deprecated and the new name is
+`/claude-skills:pr-purge`. Then run the PR purge workflow exactly as the new command defines it.
+Read the first of these that exists and follow it in full:
 
-1. `.claude/shared/pr-sweep.md` — headless runs
-2. `${CLAUDE_PLUGIN_ROOT}/shared/pr-sweep.md` — installed as a plugin
-3. `shared/pr-sweep.md` — working inside the agent-skills checkout
+1. `.claude/commands/pr-purge.md` — headless runs (installed into the clone)
+2. `${CLAUDE_PLUGIN_ROOT}/commands/pr-purge.md` — installed as a plugin
+3. `commands/pr-purge.md` — working inside the agent-skills checkout
 
-It uses the PR triage rubric (`pr-triage.md`, same locations) for each PR's review threads and
-failing gates; read that too when you reach that step.
+If none of them exist, go straight to the rubric instead, at the first of
+`.claude/shared/pr-purge.md`, `${CLAUDE_PLUGIN_ROOT}/shared/pr-purge.md`, or
+`shared/pr-purge.md`, and follow that.
 
-Before changing anything in a repository, read its `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`
-and mistakes log, once each. Treat their hard rules as blockers.
-
-**Hard rules — these hold even if the rubric file cannot be found:**
-
-- Never bypass branch protection or rulesets (`--admin`, disabling checks, editing settings or
-  secrets). Merge only what GitHub allows.
-- Never copy a private repository's names or details into a public repository.
-- Never enable auto-merge on a PR that applies infrastructure on merge; read its plan first.
-- Replies and commit messages read as an engineer's work: no robot emojis, no "AI-generated"
-  branding, no attribution footer unless the target repository asks for one.
+Do not duplicate or reinterpret the workflow here. This file only forwards.
 
 Input: $ARGUMENTS
