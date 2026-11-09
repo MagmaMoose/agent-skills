@@ -14,7 +14,7 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | --- | --- | --- |
 | PR review | `/claude-skills:pr-review` | `pr-review` |
 | PR triage | `/claude-skills:pr-triage` | `pr-triage` |
-| PR sweep | `/claude-skills:pr-sweep` | `pr-sweep` |
+| PR purge | `/claude-skills:pr-purge` | `pr-purge` |
 | Issue sweep | `/claude-skills:issue-sweep` | `issue-sweep` |
 | Chargate security review | `/claude-skills:chargate-security-review` | `chargate-security-review` |
 | Brimyr quality review | `/claude-skills:brimyr-quality-review` | `brimyr-quality-review` |
@@ -31,7 +31,7 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | Architecture diagram | `/claude-skills:diagram-draw` | `diagram-draw` |
 | Welcome-back report | `/claude-skills:catchup-write` | `catchup-write` |
 
-`pr-sweep` clears every open pull request in a GitHub organisation, so none is left to worry
+`pr-purge` clears every open pull request in a GitHub organisation, so none is left to worry
 about: each ends merged, or closed with a reason, or open with the exact thing only the owner
 can do. It inventories them in one query and fixes the causes many PRs share before touching any
 single one (a runner pool that claims jobs it cannot run, a gate Dependabot runs cannot pass), then
@@ -206,7 +206,7 @@ The Claude command namespace remains `claude-skills` for backward compatibility 
 
 ### Renamed workflows
 
-`update-docs` is now `docs-update` and `tvos-swiftui` is now `swiftui-build`, so every workflow reads `{noun}-{verb}`. The old names still resolve as deprecated aliases that forward to the new ones, so existing headless installs and scripts keep working. They will be removed in a future release; move to the new names.
+`update-docs` is now `docs-update` and `tvos-swiftui` is now `swiftui-build`, so every workflow reads `{noun}-{verb}`. `pr-sweep` is now `pr-purge`. The old names still resolve as deprecated aliases that forward to the new ones, so existing headless installs and scripts keep working. They will be removed in a future release; move to the new names.
 
 ## Compatibility
 

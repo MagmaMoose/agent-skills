@@ -13,7 +13,7 @@ Sweep open issues using the shared MagmaMoose issue sweep workflow.
 2. `${CLAUDE_PLUGIN_ROOT}/shared/issue-sweep.md` — installed as a plugin
 3. `shared/issue-sweep.md` — working inside the agent-skills checkout
 
-When an issue's state depends on open pull requests, the PR sweep rubric (`pr-sweep.md`, same
+When an issue's state depends on open pull requests, the PR purge rubric (`pr-purge.md`, same
 locations) says how to read their checks and threads.
 
 Before changing anything in a repository, read its `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`

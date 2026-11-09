@@ -1,4 +1,4 @@
-# PR sweep workflow
+# PR purge workflow
 
 Clear every open pull request in a GitHub organisation, so nothing is left to worry about.
 Every PR ends **merged** or **closed with a one-line reason**. A PR stays open only when it is
@@ -75,7 +75,7 @@ once is almost never many separate problems. Sample one log per distinct failing
   account payments have failed or your spending limit needs to be increased", is billing. Only
   the owner can fix it. Read the annotation (`gh api repos/ORG/REPO/check-runs/JOB/annotations`),
   do not re-run or rewrite workflows around it, and report every PR whose required check it
-  blocks. Self-hosted jobs and public repositories are unaffected, so a sweep can look half
+  blocks. Self-hosted jobs and public repositories are unaffected, so a purge can look half
   healthy while this is happening.
 - **A gate that cannot run in this context.** Dependabot-triggered runs only see Dependabot
   secrets, not Actions secrets, so a step that needs a secret (a preview deploy, an upload)
@@ -192,8 +192,8 @@ If the organisation runs an agent that turns open issues into PRs, closing a PR 
 stays open makes the agent open it again (watch for the same title on a branch ending in `-r2`,
 appearing minutes after you close the first). For every PR you close as obsolete, duplicate or
 wrong, close or update its linked issue with the same reason. Consolidate duplicate issues into
-one tracking issue, and close issues the sweep has resolved. Re-run the inventory at the end, so
-PRs opened during the sweep are processed too.
+one tracking issue, and close issues the purge has resolved. Re-run the inventory at the end, so
+PRs opened during the purge are processed too.
 
 If a planner agent files those issues from written notes or directives (a list of known gaps,
 a roadmap file), a stale note re-files work that already shipped. When you close an issue or PR
@@ -204,7 +204,7 @@ already have it.
 
 Other automation can also change PRs under you. Auto-merge can be switched off by another
 session or a merge gate running as the same account, and a governance bot can commit straight to
-default branches mid-sweep. Re-check auto-merge and branch state in the final pass. Before you
+default branches mid-purge. Re-check auto-merge and branch state in the final pass. Before you
 re-arm auto-merge, read the PR timeline for why it was turned off: a merge gate that pushed its
 own fix to a branch may turn auto-merge off on purpose, so the new head is reviewed and the gate
 merges it itself. Leave that to the gate rather than routing around its review. But check the
