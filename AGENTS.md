@@ -8,14 +8,14 @@ Edit CLAUDE.md; edit this file to match. They must not drift.
 
 ## What this repo is
 
-Shared agent workflows for Claude Code (commands/, namespace claude-skills) and Codex (skills/).
+Shared agent workflows for Claude Code (commands/, namespace mm) and Codex (skills/).
 Canonical logic lives in shared/; both adapters delegate to it.
 
 ## Three-layer pattern
 
 Every workflow spans three files:
 - shared/{workflow}.md — canonical logic (edit this)
-- commands/{workflow}.md — Claude Code adapter (/claude-skills:{workflow})
+- commands/{workflow}.md — Claude Code adapter (/mm:{workflow})
 - skills/{workflow}/SKILL.md — Codex adapter (invoke by skill name)
 
 ## Key rules

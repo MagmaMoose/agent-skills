@@ -12,24 +12,24 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 
 | Workflow | Claude Code command | Codex skill |
 | --- | --- | --- |
-| PR review | `/claude-skills:pr-review` | `pr-review` |
-| PR triage | `/claude-skills:pr-triage` | `pr-triage` |
-| PR purge | `/claude-skills:pr-purge` | `pr-purge` |
-| Issue sweep | `/claude-skills:issue-sweep` | `issue-sweep` |
-| Chargate security review | `/claude-skills:chargate-security-review` | `chargate-security-review` |
-| Brimyr quality review | `/claude-skills:brimyr-quality-review` | `brimyr-quality-review` |
-| Docs sync | `/claude-skills:docs-update` | `docs-update` |
-| Docs anonymisation | `/claude-skills:docs-anonymise` | `docs-anonymise` |
-| Kubernetes audit | `/claude-skills:k8s-audit` | `k8s-audit` |
-| Kubernetes observability stack | `/claude-skills:k8s-observability-stack` | `k8s-observability-stack` |
-| Codebase prune | `/claude-skills:codebase-prune` | `codebase-prune` |
-| tvOS SwiftUI | `/claude-skills:swiftui-build` | `swiftui-build` |
-| macOS SwiftUI | `/claude-skills:macos-swiftui` | `macos-swiftui` |
-| Context stack | `/claude-skills:context-optimise` | `context-optimise` |
-| Brag profile | `/claude-skills:brag-profile` | `brag-profile` |
-| MikroTik RouterOS | `/claude-skills:mikrotik-routeros` | `mikrotik-routeros` |
-| Architecture diagram | `/claude-skills:diagram-draw` | `diagram-draw` |
-| Welcome-back report | `/claude-skills:catchup-write` | `catchup-write` |
+| PR review | `/mm:pr-review` | `pr-review` |
+| PR triage | `/mm:pr-triage` | `pr-triage` |
+| PR purge | `/mm:pr-purge` | `pr-purge` |
+| Issue sweep | `/mm:issue-sweep` | `issue-sweep` |
+| Chargate security review | `/mm:chargate-security-review` | `chargate-security-review` |
+| Brimyr quality review | `/mm:brimyr-quality-review` | `brimyr-quality-review` |
+| Docs sync | `/mm:docs-update` | `docs-update` |
+| Docs anonymisation | `/mm:docs-anonymise` | `docs-anonymise` |
+| Kubernetes audit | `/mm:k8s-audit` | `k8s-audit` |
+| Kubernetes observability stack | `/mm:k8s-observability-stack` | `k8s-observability-stack` |
+| Codebase prune | `/mm:codebase-prune` | `codebase-prune` |
+| tvOS SwiftUI | `/mm:swiftui-build` | `swiftui-build` |
+| macOS SwiftUI | `/mm:macos-swiftui` | `macos-swiftui` |
+| Context stack | `/mm:context-optimise` | `context-optimise` |
+| Brag profile | `/mm:brag-profile` | `brag-profile` |
+| MikroTik RouterOS | `/mm:mikrotik-routeros` | `mikrotik-routeros` |
+| Architecture diagram | `/mm:diagram-draw` | `diagram-draw` |
+| Welcome-back report | `/mm:catchup-write` | `catchup-write` |
 
 `pr-purge` clears every open pull request in a GitHub organisation, so none is left to worry
 about: each ends merged, or closed with a reason, or open with the exact thing only the owner
@@ -202,11 +202,19 @@ was invited to, chats they are in and channels they post in are read, so the use
 one-to-ones never reach the page. Meeting notes come from Grimoire, including Teams transcripts
 downloaded by hand where a tenant blocks transcript access.
 
-The Claude command namespace remains `claude-skills` for backward compatibility with existing users and headless installs.
-
 ### Renamed workflows
 
 `update-docs` is now `docs-update` and `tvos-swiftui` is now `swiftui-build`, so every workflow reads `{noun}-{verb}`. `pr-sweep` is now `pr-purge`. The old names still resolve as deprecated aliases that forward to the new ones, so existing headless installs and scripts keep working. They will be removed in a future release; move to the new names.
+
+The Claude plugin itself is now `mm` (it was `claude-skills`), so every command is `/mm:{workflow}`. An existing install has to be swapped:
+
+```bash
+claude plugin uninstall claude-skills@magmamoose
+claude plugin marketplace update magmamoose
+claude plugin install mm@magmamoose
+```
+
+Headless images and CLAUDE.md files that call `/claude-skills:...` need the same change.
 
 ## Compatibility
 
@@ -224,21 +232,21 @@ If you installed this repository before it was renamed from `claude-skills`, upd
 
 ```bash
 claude plugin marketplace add magmamoose/agent-skills
-claude plugin install claude-skills@magmamoose
+claude plugin install mm@magmamoose
 ```
 
 Invoke the Claude commands with:
 
 ```text
-/claude-skills:pr-review 123
-/claude-skills:pr-triage 123
-/claude-skills:chargate-security-review 123
-/claude-skills:brimyr-quality-review 123
-/claude-skills:docs-update
-/claude-skills:k8s-audit
-/claude-skills:codebase-prune
-/claude-skills:swiftui-build 42
-/claude-skills:context-optimise
+/mm:pr-review 123
+/mm:pr-triage 123
+/mm:chargate-security-review 123
+/mm:brimyr-quality-review 123
+/mm:docs-update
+/mm:k8s-audit
+/mm:codebase-prune
+/mm:swiftui-build 42
+/mm:context-optimise
 ```
 
 ### Claude headless / in-cluster install
@@ -248,13 +256,13 @@ The same two CLI calls work non-interactively at image-build time, after the `cl
 ```Dockerfile
 RUN npm install -g @anthropic-ai/claude-code \
  && claude plugin marketplace add magmamoose/agent-skills \
- && claude plugin install claude-skills@magmamoose
+ && claude plugin install mm@magmamoose
 ```
 
 Then the worker can run, for example:
 
 ```bash
-claude -p "/claude-skills:pr-review 123"
+claude -p "/mm:pr-review 123"
 ```
 
 ### Codex marketplace install

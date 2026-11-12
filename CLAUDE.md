@@ -1,6 +1,6 @@
 # agent-skills
 
-Shared agent workflows for Claude Code (commands/, namespace claude-skills) and Codex (skills/).
+Shared agent workflows for Claude Code (commands/, namespace mm) and Codex (skills/).
 Canonical logic lives in shared/; both adapters delegate to it. Breaking shared/ breaks both platforms.
 
 @.claude/ARCHITECTURE_MAP.md

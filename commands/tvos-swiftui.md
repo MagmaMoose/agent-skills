@@ -1,15 +1,15 @@
 ---
-description: Deprecated alias for /claude-skills:swiftui-build. Runs the same tvOS SwiftUI workflow under the old name
+description: Deprecated alias for /mm:swiftui-build. Runs the same tvOS SwiftUI workflow under the old name
 argument-hint: "[issue number, issue URL, or a description of the change]"
 allowed-tools: Bash(git:*), Bash(gh:*), Bash(xcrun:*), Bash(xcodebuild:*), Bash(xcodegen:*), Bash(export:*), Bash(find:*), Bash(rg:*), Bash(grep:*), Bash(ls:*), Read, Write, Edit, Grep, Glob
 ---
 
-`/claude-skills:tvos-swiftui` has been renamed to `/claude-skills:swiftui-build`, so every
+`/mm:tvos-swiftui` has been renamed to `/mm:swiftui-build`, so every
 workflow here reads `{noun}-{verb}`. This alias exists so existing headless installs and scripts
 keep working, and it will be removed in a future release.
 
 Say once, before you start, that the command is deprecated and the new name is
-`/claude-skills:swiftui-build`. Then run the tvOS SwiftUI workflow exactly as the new command
+`/mm:swiftui-build`. Then run the tvOS SwiftUI workflow exactly as the new command
 defines it. Read the first of these that exists and follow it in full:
 
 1. `.claude/commands/swiftui-build.md` — headless runs (installed into the clone)

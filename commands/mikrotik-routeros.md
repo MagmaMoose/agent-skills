@@ -9,7 +9,7 @@ Work on MikroTik RouterOS using the shared MagmaMoose reference.
 **First, read `shared/mikrotik-routeros.md` in full.** It is short and it carries the traps that
 actually cause outages. It lives at the first of these paths that exists (check in order):
 
-1. the newest-versioned match of `~/.claude/plugins/cache/magmamoose/claude-skills/*/shared/mikrotik-routeros.md` — the installed plugin (source of truth)
+1. the newest-versioned match of `~/.claude/plugins/cache/magmamoose/mm/*/shared/mikrotik-routeros.md` — the installed plugin (source of truth)
 2. `.claude/shared/mikrotik-routeros.md` — headless runs
 3. `shared/mikrotik-routeros.md` — working inside the agent-skills checkout
 
