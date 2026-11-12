@@ -347,7 +347,7 @@ Add verbatim to `CLAUDE.md`, adjusted so every command named actually resolves (
 [maintenance]
 - Bug that took more than an hour: append it to .claude/COMMON_MISTAKES.md.
 - Architectural decision: write it to .claude/decisions/ (run /adr if installed).
-- Public behaviour, API, config or setup changed: sync ./docs (run /claude-skills:docs-update).
+- Public behaviour, API, config or setup changed: sync ./docs (run /mm:docs-update).
 - PROJECT_INDEX.json stale after a new module or a big refactor: regenerate the affected modules
   section only, and update "generated" in that same edit. Never change "generated" on its own.
 - Keep CLAUDE.md under ~500 tokens. Push detail into on-demand .claude/ files.

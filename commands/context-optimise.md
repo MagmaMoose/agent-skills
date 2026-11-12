@@ -45,7 +45,7 @@ repo wins over the rubric.
 - **Idempotent.** A second run must not duplicate sections, re-append the maintenance block, or
   clobber hand-written content. On a repo whose stack is already accurate it changes nothing,
   and `generated` in `PROJECT_INDEX.json` only ever moves in an edit that changes something else.
-- **Scaffold `./docs`, don't write it.** Filling the pages is `/claude-skills:docs-update`'s job
+- **Scaffold `./docs`, don't write it.** Filling the pages is `/mm:docs-update`'s job
   against its own 30-surface sweep. Never introduce a second docs system alongside an existing one.
 - **Name only commands that resolve.** Check `~/.claude/commands/` and `.claude/commands/` before
   referencing `/adr` or any other command in the maintenance block.
