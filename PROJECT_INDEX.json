@@ -38,7 +38,8 @@
         "mikrotik/scripting.md",
         "mikrotik/security.md",
         "mikrotik/upgrades.md",
-        "catchup-write.md"
+        "catchup-write.md",
+        "email-write.md"
       ],
       "depends_on": []
     },
@@ -66,7 +67,8 @@
         "pr-sweep.md (deprecated -> pr-purge)",
         "tvos-swiftui.md (deprecated -> swiftui-build)",
         "update-docs.md (deprecated -> docs-update)",
-        "catchup-write.md"
+        "catchup-write.md",
+        "email-write.md"
       ],
       "depends_on": [
         "shared"
@@ -96,7 +98,8 @@
         "pr-sweep (deprecated -> pr-purge)",
         "tvos-swiftui (deprecated -> swiftui-build)",
         "update-docs (deprecated -> docs-update)",
-        "catchup-write"
+        "catchup-write",
+        "email-write"
       ],
       "depends_on": [
         "shared"
@@ -116,7 +119,7 @@
     },
     "claude-plugin": {
       "path": ".claude-plugin/",
-      "purpose": "Claude Code plugin manifests. marketplace.json for registry; plugin.json defines the mm plugin (version 0.15.0).",
+      "purpose": "Claude Code plugin manifests. marketplace.json for registry; plugin.json defines the mm plugin (version 0.16.0).",
       "exports": [
         "marketplace.json",
         "plugin.json"

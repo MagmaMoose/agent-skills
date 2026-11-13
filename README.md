@@ -30,6 +30,7 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | MikroTik RouterOS | `/mm:mikrotik-routeros` | `mikrotik-routeros` |
 | Architecture diagram | `/mm:diagram-draw` | `diagram-draw` |
 | Welcome-back report | `/mm:catchup-write` | `catchup-write` |
+| Email writing | `/mm:email-write` | `email-write` |
 
 `pr-purge` clears every open pull request in a GitHub organisation, so none is left to worry
 about: each ends merged, or closed with a reason, or open with the exact thing only the owner
@@ -201,6 +202,14 @@ Privacy is enforced where the data is collected, not in the prompt. Only meeting
 was invited to, chats they are in and channels they post in are read, so the user's own
 one-to-ones never reach the page. Meeting notes come from Grimoire, including Teams transcripts
 downloaded by hand where a tenant blocks transcript access.
+
+`email-write` drafts an email, chat message or letter for the user to send, in their own voice.
+It starts from a sample they have approved, kept in their global agent instructions, a personal
+voice skill or memory, and otherwise falls back to short, polite defaults: specific thanks, the
+facts the reader can't know, the professional call left with the reader, one ask with "please",
+and their questions answered with exact facts. Messages that ask for something or push back get a
+planning pass first, and every draft gets a de-AI pass when those tools are installed. It never
+sends anything itself.
 
 ### Renamed workflows
 
