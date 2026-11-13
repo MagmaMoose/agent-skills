@@ -35,7 +35,8 @@ anything. Rules written there are blockers.
 - **Never print a secret.** Inventory `env` and `headers` key names only.
 - **Never edit third-party skills or plugin files in place.** Report them instead.
 - **Memory indexes hold pointers, not content.** Keep every entry, link and line order, keep
-  prohibitions in the hooks, and diff the link list against the backup.
+  prohibitions and near deadlines in the hooks, re-read the index right before writing it (other
+  sessions append to it), and diff the link list against the backup.
 - **Idempotent.** A second run on a tuned setup changes nothing. Leave global config edits
   uncommitted.
 

@@ -222,16 +222,21 @@ index of a project nobody opens costs nothing.
 
 - **Hooks that carry content.** The index holds pointers. The facts belong in the linked file. Rewrite
   each hook to name what the memory is about in a few words and drop dates, figures and outcomes. Keep
-  every entry, link and line in order. Keep a prohibition in the hook ("don't restore X",
-  "read-only"), because a session can act before it opens the file.
+  every entry, link and line in order. Keep a prohibition ("don't restore X", "read-only") and an
+  expiry or deadline that is near or just past in the hook, because a session can act, or fail to,
+  before it opens the file.
 - **Copies of global rules.** A memory that only restates a global instruction adds nothing. One that
   carries the why or a per-project exception stays.
 - **Broken links and orphans.** An index line pointing at a missing file misleads, and a memory file
   missing from the index is invisible to recall. Fix the index.
 - **Stale entries.** Report them. Don't rewrite facts you can't verify.
 
+Other sessions keep writing to these indexes while you work, so a busy one can gain entries between
+your backup and your rewrite. Re-read the index right before you write it, and never drop an entry
+you did not see in the backup.
+
 Back up each index before rewriting it, and check afterwards that it links the same files in the same
-order:
+order, plus only the entries other sessions added in the meantime:
 
 ```sh
 diff <(grep -o '([^)]*\.md)' "$ARCHIVE/projects/$PROJECT/memory/MEMORY.md") \
@@ -245,7 +250,8 @@ Run every check and report its real output. Never report a check you did not run
 1. Re-run the same probes, from the empty directory and from each project directory. Report before
    and after per category and per file.
 2. Every moved rule exists in its new file, and every pointer names a file that exists.
-3. Every rewritten memory index links the same files in the same order as its backup.
+3. Every rewritten memory index links the same files in the same order as its backup, plus any
+   entries other sessions added during the run, and no memory file is left out of its index.
 4. Auth, signing and secret wiring is unchanged: diff the `env` and `hooks` blocks of
    `settings.json` against the archive copy.
 5. Nothing that removes a capability ran without the user's yes.
