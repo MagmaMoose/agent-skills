@@ -26,6 +26,7 @@ Every workflow is named `{noun}-{verb}`: the thing it acts on, then what it does
 | tvOS SwiftUI | `/mm:swiftui-build` | `swiftui-build` |
 | macOS SwiftUI | `/mm:macos-swiftui` | `macos-swiftui` |
 | Context stack | `/mm:context-optimise` | `context-optimise` |
+| Global context | `/mm:global-context-optimise` | `global-context-optimise` |
 | Brag profile | `/mm:brag-profile` | `brag-profile` |
 | MikroTik RouterOS | `/mm:mikrotik-routeros` | `mikrotik-routeros` |
 | Architecture diagram | `/mm:diagram-draw` | `diagram-draw` |
@@ -174,6 +175,16 @@ current session and costs the same bug three more times next month, so an existi
 never trimmed away, only folded in, and the run reports line by line what moved where. A re-run on
 a repository whose stack is still accurate changes nothing, not even the index's `generated` date,
 so a scheduled refresh has nothing to commit.
+
+`global-context-optimise` does the same job for the user-level setup that every session on a
+machine inherits: global instructions and rules, the skill and command listing, plugins, MCP
+servers and account connectors, hook output, and per-project memory indexes. It installs nothing.
+It measures the default context with the agent's own report, once from an empty directory and once
+from each directory where most sessions start, then moves procedures out of the always-loaded tier
+behind a pointer, archives duplicates, and rewrites memory indexes into pointers. Every removal of
+a skill, plugin, server, connector or hook goes back to the user as their call, with its measured
+cost. Rules the user wrote are never dropped, and anything that authenticates, signs or fetches
+secrets is left exactly as it is.
 
 `brag-profile` puts a cache in front of the launch-video workflow so a repository pays for brand
 and product discovery once rather than on every run. A launch video needs a narrow, slow-moving
